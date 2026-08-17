@@ -1,0 +1,803 @@
+---
+/**
+ * * The index, as a scatter plot.
+ *
+ * Each piece is a point. The default view is publication date against reading time,
+ * because both are free — nothing has to be recorded by hand for them to work.
+ *
+ * Extra axis pairs appear automatically once at least MIN_POINTS pieces carry the
+ * optional analysis fields (see `src/content.config.ts`). Nothing breaks when they are
+ * absent; the picker simply doesn't render until there is something to pick.
+ *
+ * A least-squares fit with a 95% band on the fitted mean runs through whatever is
+ * visible, and recomputes when you filter to a single desk.
+ */
+import { desks } from "@config/desks";
+
+export interface ScatterPoint {
+  slug: string;
+  title: string;
+  desk: string;
+  date: number; // epoch ms
+  mins: number; // derived reading time
+  money?: number;
+  cert?: number;
+  work?: number;
+  surp?: number;
+  scope?: number;
+}
+
+interface Props {
+  points: ScatterPoint[];
+  class?: string;
+}
+
+const { points, class: className = "" } = Astro.props;
+
+const payload = { points, desks };
+---
+
+{
+  /*
+  The payload rides on a data attribute rather than a <script type="application/json">
+  block. Prettier rewrites a childless script element to the self-closing form, which
+  HTML does not honour — the tag renders empty, the payload vanishes, and the chart
+  silently draws nothing. An attribute cannot be reformatted into a broken state.
+*/
+}
+<section
+  class={`scatter-index ${className}`}
+  data-scatter
+  data-scatter-payload={JSON.stringify(payload)}
+>
+  <div class="border-rule flex flex-wrap items-end gap-5 border-b pt-8 pb-3.5">
+    <h2 class="text-base-600 m-0 font-mono text-xs font-medium tracking-[0.14em] uppercase">
+      Everything we've asked
+    </h2>
+    <div
+      class="border-base-950 bg-paper ml-auto hidden border max-md:!hidden"
+      role="group"
+      aria-label="Choose plot axes"
+      data-axis-picker
+    >
+    </div>
+  </div>
+
+  <p
+    class="text-base-400 mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[11px] tracking-[0.06em] max-md:hidden"
+  >
+    <span class="text-base-600 font-medium">Click a point to read the piece.</span>
+    <span>Line is a least-squares fit, shaded to 95%.</span>
+  </p>
+
+  <!-- the plot. hidden on small screens, where the list below is the real interface -->
+  <div class="relative mt-3.5 max-md:hidden" data-plot>
+    <svg
+      data-chart
+      class="block h-auto w-full overflow-visible"
+      role="img"
+      aria-label="Scatter plot of published pieces with a fitted trend line. Each point is one piece."
+    ></svg>
+    <div
+      data-card
+      aria-hidden="true"
+      class="border-base-950 bg-paper pointer-events-none absolute z-10 w-[300px] translate-y-1 border px-4 pt-3.5 opacity-0 shadow-[6px_6px_0_rgba(20,24,26,0.09)] transition-[opacity,transform] duration-150"
+    >
+    </div>
+  </div>
+
+  <!-- desks: legend on desktop, filter everywhere -->
+  <div class="border-rule mt-6 flex flex-wrap border-t" role="group" aria-label="Filter by desk">
+    {
+      desks.map((desk) => (
+        <button
+          type="button"
+          data-desk={desk.id}
+          aria-pressed="false"
+          class="border-rule text-base-600 aria-pressed:text-base-950 focus-visible:outline-riso-sky mr-[18px] flex cursor-pointer items-center gap-2.5 border-r py-3.5 pr-[18px] font-mono text-[11px] tracking-[0.1em] uppercase transition-opacity last:mr-0 last:border-r-0 focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          <span class="block size-2.5 shrink-0 rounded-full" style={`background:${desk.hex}`} />
+          <span class="text-base-400">{desk.ink}</span>
+          {desk.label}
+        </button>
+      ))
+    }
+  </div>
+
+  <!-- the list. the only interface on mobile, and the no-JS fallback everywhere. -->
+  <ul class="border-rule mt-5 border-t md:hidden" data-list></ul>
+</section>
+
+<script>
+  interface Pt {
+    slug: string;
+    title: string;
+    desk: string;
+    date: number;
+    mins: number;
+    [k: string]: unknown;
+  }
+  interface Desk {
+    id: string;
+    label: string;
+    ink: string;
+    hex: string;
+  }
+  type Axis = {
+    k: string;
+    label: string;
+    fmt: (v: number) => string;
+    min: number;
+    max: number;
+    n: number;
+    ticks?: number[];
+  };
+
+  const MIN_POINTS = 4; // fewest points that make a fit worth drawing
+
+  const MONTH = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const fmtDate = (ms: number) => {
+    const d = new Date(ms);
+    return `${MONTH[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`;
+  };
+  const MONEY = [
+    "",
+    "",
+    "$100",
+    "$1k",
+    "$10k",
+    "$100k",
+    "$1M",
+    "$10M",
+    "$100M",
+    "$1B",
+    "$10B",
+    "$100B",
+    "$1T",
+  ];
+  const SCOPE = ["", "one person", "a household", "a city", "an industry", "a country"];
+
+  function initScatter(root: HTMLElement) {
+    const svg = root.querySelector<SVGSVGElement>("[data-chart]");
+    const card = root.querySelector<HTMLElement>("[data-card]");
+    const picker = root.querySelector<HTMLElement>("[data-axis-picker]");
+    const list = root.querySelector<HTMLElement>("[data-list]");
+    if (!svg || !card || !picker || !list) return;
+
+    const { points, desks } = JSON.parse(root.dataset.scatterPayload || "{}") as {
+      points: Pt[];
+      desks: Desk[];
+    };
+    if (!points?.length) return;
+
+    const deskOf = new Map(desks.map((d) => [d.id, d]));
+    const hexOf = (id: string) => deskOf.get(id)?.hex ?? "#5A6360";
+
+    // ---------------------------------------------------------------- axis views
+    const span = (k: string) => {
+      const vals = points.map((p) => p[k] as number).filter((v) => typeof v === "number");
+      return [Math.min(...vals), Math.max(...vals)] as const;
+    };
+    const pad = (lo: number, hi: number, f = 0.08) => {
+      const d = hi - lo || Math.abs(hi) || 1;
+      return [lo - d * f, hi + d * f] as const;
+    };
+    const has = (a: string, b: string) =>
+      points.filter((p) => typeof p[a] === "number" && typeof p[b] === "number").length >=
+      MIN_POINTS;
+
+    const dateAxis = (): Axis => {
+      const [lo, hi] = pad(...span("date"));
+      return { k: "date", label: "Published", fmt: fmtDate, min: lo, max: hi, n: 4 };
+    };
+
+    const views: { x: Axis; y: Axis; name: string }[] = [];
+    {
+      // whole-minute ticks — rounding a fractional scale produces labels like 6/5/3/2/0
+      const [, hi] = span("mins");
+      const top = Math.max(2, Math.ceil(hi * 1.15));
+      const step = [1, 2, 5, 10, 15, 30, 60].find((s) => top / s <= 5) ?? Math.ceil(top / 5);
+      const max = Math.ceil(top / step) * step;
+      views.push({
+        name: "Published × Length",
+        x: dateAxis(),
+        y: {
+          k: "mins",
+          label: "Minutes to read",
+          fmt: (v) => `${Math.round(v)} min`,
+          min: 0,
+          max,
+          n: max / step,
+          ticks: Array.from({ length: max / step + 1 }, (_, i) => i * step),
+        },
+      });
+    }
+    if (has("money", "cert"))
+      views.push({
+        name: "Money × Certainty",
+        x: {
+          k: "money",
+          label: "Dollars at stake",
+          fmt: (v) => MONEY[Math.round(v)] ?? "",
+          ...axisRange("money", 5),
+        },
+        y: {
+          k: "cert",
+          label: "How sure we are",
+          fmt: (v) => `${Math.round(v)}%`,
+          ...axisRange("cert", 4),
+        },
+      });
+    if (has("work", "surp"))
+      views.push({
+        name: "Work × Surprise",
+        x: {
+          k: "work",
+          label: "Hours of research",
+          fmt: (v) => `${Math.round(v)}h`,
+          ...axisRange("work", 3),
+        },
+        y: {
+          k: "surp",
+          label: "Distance from the guess",
+          fmt: (v) => `${Math.round(v)}%`,
+          ...axisRange("surp", 4),
+        },
+      });
+    if (has("date", "scope"))
+      views.push({
+        name: "Date × Scope",
+        x: dateAxis(),
+        y: {
+          k: "scope",
+          label: "Who it touches",
+          fmt: (v) => SCOPE[Math.round(v)] ?? "",
+          min: 0.6,
+          max: 5.4,
+          n: 4,
+          ticks: [1, 2, 3, 4, 5],
+        },
+      });
+
+    function axisRange(k: string, n: number) {
+      const [lo, hi] = pad(...span(k));
+      return { min: lo, max: hi, n };
+    }
+
+    // ------------------------------------------------------------------- drawing
+    const W = 1000,
+      H = 440,
+      M = { t: 30, r: 26, b: 58, l: 104 };
+    const NS = "http://www.w3.org/2000/svg";
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let view = 0,
+      only: string | null = null,
+      first = true;
+    const layers: Record<string, any> = {};
+
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+    const el = (n: string, a: Record<string, any> = {}) => {
+      const e = document.createElementNS(NS, n);
+      for (const k in a) e.setAttribute(k, String(a[k]));
+      return e as SVGElement;
+    };
+    const sx = (v: number) => {
+      const a = views[view].x;
+      return M.l + ((v - a.min) / (a.max - a.min)) * (W - M.l - M.r);
+    };
+    const sy = (v: number) => {
+      const a = views[view].y;
+      return H - M.b - ((v - a.min) / (a.max - a.min)) * (H - M.t - M.b);
+    };
+
+    // Point size encodes recency — but only when date is not already an axis,
+    // where it would just restate the x position.
+    const dLo = Math.min(...points.map((p) => p.date));
+    const dHi = Math.max(...points.map((p) => p.date));
+    const radius = (p: Pt) =>
+      views[view].x.k === "date" || dHi === dLo ? 7 : 5 + ((p.date - dLo) / (dHi - dLo)) * 7.5;
+    const newest = points.reduce((a, b) => (b.date > a.date ? b : a));
+
+    function drawStatic() {
+      svg!.textContent = "";
+      const v = views[view];
+      const defs = el("defs"),
+        cp = el("clipPath", { id: "plotclip" });
+      cp.appendChild(el("rect", { x: M.l, y: M.t, width: W - M.l - M.r, height: H - M.t - M.b }));
+      defs.appendChild(cp);
+      svg!.appendChild(defs);
+
+      const vals = (a: Axis) =>
+        a.ticks ?? Array.from({ length: a.n + 1 }, (_, i) => a.min + ((a.max - a.min) * i) / a.n);
+
+      const g = el("g");
+      g.appendChild(
+        el("rect", {
+          class: "plot-bg",
+          x: M.l,
+          y: M.t,
+          width: W - M.l - M.r,
+          height: H - M.t - M.b,
+        }),
+      );
+      vals(v.y).forEach((yv) => {
+        const y = sy(yv);
+        g.appendChild(el("line", { class: "tick", x1: M.l, x2: W - M.r, y1: y, y2: y }));
+        const lb = el("text", {
+          class: "tick-label",
+          x: M.l - 14,
+          y: y + 3.5,
+          "text-anchor": "end",
+        });
+        lb.textContent = v.y.fmt(yv);
+        g.appendChild(lb);
+      });
+      vals(v.x).forEach((xv) => {
+        const lb = el("text", {
+          class: "tick-label",
+          x: sx(xv),
+          y: H - M.b + 21,
+          "text-anchor": "middle",
+        });
+        lb.textContent = v.x.fmt(xv);
+        g.appendChild(lb);
+      });
+      svg!.appendChild(g);
+
+      layers.fit = el("g", { "clip-path": "url(#plotclip)" });
+      svg!.appendChild(layers.fit);
+
+      const ax = el("g");
+      const yl = el("line", { class: "ax-line", x1: M.l, y1: M.t, x2: M.l, y2: H - M.b });
+      const xl = el("line", { class: "ax-line", x1: M.l, y1: H - M.b, x2: W - M.r, y2: H - M.b });
+      ax.appendChild(yl);
+      ax.appendChild(xl);
+      const xt = el("text", {
+        class: "ax-label",
+        x: W - M.r,
+        y: H - M.b + 45,
+        "text-anchor": "end",
+      });
+      xt.textContent = `${v.x.label} →`;
+      const yt = el("text", { class: "ax-label", x: M.l - 14, y: M.t - 13 });
+      yt.textContent = `↑ ${v.y.label}`;
+      ax.appendChild(xt);
+      ax.appendChild(yt);
+      svg!.appendChild(ax);
+
+      if (first && !reduce) {
+        (
+          [
+            [xl, W - M.l - M.r],
+            [yl, H - M.t - M.b],
+          ] as [SVGElement, number][]
+        ).forEach(([l, len]) => {
+          (l as any).style.strokeDasharray = len;
+          l.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], {
+            duration: 540,
+            easing: "cubic-bezier(.2,.7,.3,1)",
+            fill: "backwards",
+          });
+        });
+      }
+    }
+
+    /** OLS in pixel space, with a 95% band on the fitted mean. */
+    function fit() {
+      layers.fit.textContent = "";
+      if (layers.rlabel) {
+        layers.rlabel.remove();
+        layers.rlabel = null;
+      }
+      const v = views[view];
+      const pts = points.filter(
+        (p) =>
+          (!only || p.desk === only) &&
+          typeof p[v.x.k] === "number" &&
+          typeof p[v.y.k] === "number",
+      );
+      if (pts.length < MIN_POINTS) return;
+
+      const X = pts.map((p) => sx(p[v.x.k] as number));
+      const Y = pts.map((p) => sy(p[v.y.k] as number));
+      const n = X.length;
+      const mx = X.reduce((a, b) => a + b, 0) / n;
+      const my = Y.reduce((a, b) => a + b, 0) / n;
+      let Sxx = 0,
+        Sxy = 0,
+        Syy = 0;
+      for (let i = 0; i < n; i++) {
+        Sxx += (X[i] - mx) ** 2;
+        Sxy += (X[i] - mx) * (Y[i] - my);
+        Syy += (Y[i] - my) ** 2;
+      }
+      if (!Sxx || !Syy) return;
+      const b = Sxy / Sxx,
+        a = my - b * mx;
+      const r = Sxy / Math.sqrt(Sxx * Syy);
+      let sse = 0;
+      for (let i = 0; i < n; i++) sse += (Y[i] - (a + b * X[i])) ** 2;
+      const se = Math.sqrt(sse / (n - 2));
+      const t = 2.09; // ~95% for small n
+
+      const x0 = Math.min(...X) - 16,
+        x1 = Math.max(...X) + 16;
+      const N = 48,
+        up: [number, number][] = [],
+        lo: [number, number][] = [];
+      for (let i = 0; i <= N; i++) {
+        const x = x0 + ((x1 - x0) * i) / N,
+          yh = a + b * x;
+        const d = t * se * Math.sqrt(1 / n + (x - mx) ** 2 / Sxx);
+        up.push([x, yh - d]);
+        lo.push([x, yh + d]);
+      }
+      const col = only ? hexOf(only) : "#14181A";
+      const P = (p: [number, number]) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`;
+      layers.fit.appendChild(
+        el("path", {
+          class: "fit-band",
+          fill: col,
+          d: `M${up.map(P).join("L")}L${lo.reverse().map(P).join("L")}Z`,
+        }),
+      );
+
+      const line = el("line", {
+        class: "fit-line",
+        x1: x0,
+        y1: a + b * x0,
+        x2: x1,
+        y2: a + b * x1,
+        stroke: col,
+      });
+      layers.fit.appendChild(line);
+      if (!reduce) {
+        const len = Math.hypot(x1 - x0, b * (x1 - x0));
+        (line as any).style.strokeDasharray = len;
+        line.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], {
+          duration: 700,
+          delay: first ? 840 : 280,
+          easing: "cubic-bezier(.3,.7,.3,1)",
+          fill: "backwards",
+        });
+      }
+      // parked outside the plot so it can never sit on top of a point
+      const lab = el("text", {
+        class: "fit-label",
+        x: M.l,
+        y: H - M.b + 45,
+        fill: col,
+        "text-anchor": "start",
+      });
+      lab.textContent = `n = ${n} · r = ${(-r).toFixed(2).replace("-", "−")}`;
+      layers.rlabel = lab;
+    }
+
+    const raise = () => layers.rlabel && svg!.appendChild(layers.rlabel);
+
+    function bind(node: any, p: Pt) {
+      const show = () => showCard(p, node._x, node._y);
+      const hide = () => card!.classList.remove("is-on");
+      node.onmouseenter = show;
+      node.onmouseleave = hide;
+      node.onfocus = show;
+      node.onblur = hide;
+      node.onclick = () => (location.href = `/blog/${p.slug}/`);
+      node.onkeydown = (e: KeyboardEvent) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          location.href = `/blog/${p.slug}/`;
+        }
+      };
+    }
+
+    function drawPoints() {
+      const v = views[view];
+      const g = el("g");
+      points.forEach((p, i) => {
+        const hex = hexOf(p.desk),
+          rr = radius(p);
+        const missing = typeof p[v.x.k] !== "number" || typeof p[v.y.k] !== "number";
+        const node = el("g", {
+          class: "pt",
+          tabindex: "0",
+          role: "link",
+          "aria-label": `${p.title} — ${deskOf.get(p.desk)?.label ?? p.desk}, published ${fmtDate(p.date)}`,
+        }) as any;
+        node.appendChild(el("circle", { class: "halo", cx: 0, cy: 0, r: rr + 7, stroke: hex }));
+        node.appendChild(el("circle", { class: "core", cx: 0, cy: 0, r: rr, fill: hex }));
+        // a piece missing this view's data is parked rather than plotted at a lie
+        const x = missing ? M.l - 60 : sx(p[v.x.k] as number);
+        const y = missing ? H - M.b + 78 : sy(p[v.y.k] as number);
+        node.setAttribute("transform", `translate(${x},${y})`);
+        node.style.display = missing ? "none" : "";
+        node._p = p;
+        node._x = x;
+        node._y = y;
+        if (!reduce && !missing)
+          node.animate(
+            [
+              { opacity: 0, transform: `translate(${x}px,${y - 18}px)` },
+              { opacity: 1, transform: `translate(${x}px,${y}px)` },
+            ],
+            {
+              duration: 440,
+              delay: 300 + i * 34,
+              easing: "cubic-bezier(.2,.8,.3,1)",
+              fill: "backwards",
+            },
+          );
+        bind(node, p);
+        g.appendChild(node);
+      });
+      svg!.appendChild(g);
+      layers.pts = g;
+    }
+
+    function drawCallout() {
+      if (views[view].x.k === "date") return; // date on x already reads left-to-right
+      if (layers.call) layers.call.remove();
+      const v = views[view];
+      if (typeof newest[v.x.k] !== "number" || typeof newest[v.y.k] !== "number") return;
+      const x = sx(newest[v.x.k] as number),
+        y = sy(newest[v.y.k] as number),
+        rr = radius(newest);
+      const right = x < W - M.r - 150,
+        dx = right ? 1 : -1;
+      const g = el("g", { class: "callout" });
+      g.appendChild(
+        el("line", { x1: x + dx * (rr + 5), y1: y - 5, x2: x + dx * (rr + 24), y2: y - 22 }),
+      );
+      g.appendChild(
+        el("line", { x1: x + dx * (rr + 24), y1: y - 22, x2: x + dx * (rr + 78), y2: y - 22 }),
+      );
+      const tx = el("text", {
+        x: x + dx * (rr + 30),
+        y: y - 27,
+        "text-anchor": right ? "start" : "end",
+      });
+      tx.textContent = "Newest";
+      g.appendChild(tx);
+      svg!.appendChild(g);
+      layers.call = g;
+    }
+
+    function showCard(p: Pt, x: number, y: number) {
+      const v = views[view],
+        d = deskOf.get(p.desk);
+      const row = (dt: string, dd: string) =>
+        `<dt class="tracking-[0.06em] uppercase text-base-400">${dt}</dt><dd class="m-0 text-base-950 tabular-nums">${dd}</dd>`;
+      card!.innerHTML =
+        `<div class="mb-2.5 flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] uppercase text-base-600">` +
+        `<i class="block size-2 rounded-full" style="background:${hexOf(p.desk)}"></i>${d?.ink ?? ""} — ${d?.label ?? p.desk}</div>` +
+        `<h3 class="font-display m-0 mb-3 text-[19px] leading-tight font-semibold tracking-[-0.02em] text-balance">${p.title}</h3>` +
+        `<dl class="m-0 mb-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-[3px] font-mono text-[11px]">` +
+        row(v.x.label, v.x.fmt(p[v.x.k] as number)) +
+        row(v.y.label, v.y.fmt(p[v.y.k] as number)) +
+        (v.x.k === "date" ? "" : row("Published", fmtDate(p.date))) +
+        `</dl>` +
+        `<div class="-mx-4 flex justify-between border-t border-rule px-4 py-2.5 font-mono text-[10.5px] tracking-[0.14em] uppercase text-base-950"><span>Read the piece</span><span>&rarr;</span></div>`;
+      const rect = svg!.getBoundingClientRect();
+      const px = (x / W) * rect.width,
+        py = (y / H) * rect.height;
+      card!.style.left = `${Math.min(Math.max(px - 150, 0), rect.width - 300)}px`;
+      card!.style.top = `${py > rect.height * 0.5 ? py - (card!.offsetHeight + 20) : py + 26}px`;
+      card!.classList.add("is-on");
+    }
+
+    function applyFilter() {
+      layers.pts.querySelectorAll(".pt").forEach((g: any) => {
+        const on = !only || g._p.desk === only;
+        g.style.opacity = on ? "1" : "0.13";
+        g.style.pointerEvents = on ? "auto" : "none";
+      });
+      if (layers.call) layers.call.style.opacity = !only || newest.desk === only ? "1" : "0.13";
+    }
+
+    function build() {
+      drawStatic();
+      fit();
+      drawPoints();
+      raise();
+      drawCallout();
+      first = false;
+    }
+
+    function retarget() {
+      const v = views[view],
+        pts = layers.pts;
+      pts.remove();
+      drawStatic();
+      fit();
+      svg!.appendChild(pts);
+      raise();
+      card!.classList.remove("is-on");
+      [...pts.children].forEach((node: any, i: number) => {
+        const p = node._p as Pt;
+        const missing = typeof p[v.x.k] !== "number" || typeof p[v.y.k] !== "number";
+        node.style.display = missing ? "none" : "";
+        if (missing) return;
+        const x = sx(p[v.x.k] as number),
+          y = sy(p[v.y.k] as number);
+        const rr = radius(p);
+        node.querySelector(".core")?.setAttribute("r", String(rr));
+        node.querySelector(".halo")?.setAttribute("r", String(rr + 7));
+        if (!reduce)
+          node.animate(
+            [
+              { transform: `translate(${node._x}px,${node._y}px)` },
+              { transform: `translate(${x}px,${y}px)` },
+            ],
+            {
+              duration: 640,
+              delay: i * 24,
+              easing: "cubic-bezier(.45,0,.15,1)",
+              fill: "backwards",
+            },
+          );
+        node.setAttribute("transform", `translate(${x},${y})`);
+        node._x = x;
+        node._y = y;
+      });
+      drawCallout();
+      applyFilter();
+    }
+
+    // ------------------------------------------------------------------ controls
+    if (views.length > 1) {
+      picker!.classList.remove("hidden");
+      views.forEach((v, i) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.dataset.view = String(i);
+        b.setAttribute("aria-pressed", i === 0 ? "true" : "false");
+        b.textContent = v.name;
+        b.className =
+          "cursor-pointer border-0 border-r border-base-950 px-3.5 py-2.5 font-mono text-[11px] tracking-[0.08em] uppercase text-base-600 transition-colors last:border-r-0 aria-pressed:bg-base-950 aria-pressed:text-paper focus-visible:outline-riso-sky focus-visible:outline-2 focus-visible:outline-offset-2";
+        b.onclick = () => {
+          if (i === view) return;
+          picker!
+            .querySelectorAll("button")
+            .forEach((o) => o.setAttribute("aria-pressed", "false"));
+          b.setAttribute("aria-pressed", "true");
+          view = i;
+          retarget();
+        };
+        picker!.appendChild(b);
+      });
+    }
+
+    root.querySelectorAll<HTMLButtonElement>("[data-desk]").forEach((b) => {
+      b.onclick = () => {
+        only = only === b.dataset.desk ? null : b.dataset.desk!;
+        root.querySelectorAll<HTMLButtonElement>("[data-desk]").forEach((o) => {
+          o.setAttribute("aria-pressed", String(only === o.dataset.desk));
+          o.classList.toggle("opacity-30", !!only && only !== o.dataset.desk);
+        });
+        fit();
+        raise();
+        applyFilter();
+      };
+    });
+
+    // list — mobile interface and no-JS fallback
+    list!.innerHTML = [...points]
+      .sort((a, b) => b.date - a.date)
+      .map((p) => {
+        const d = deskOf.get(p.desk);
+        return `<li class="border-b border-rule"><a href="/blog/${p.slug}/" class="block py-4 no-underline text-inherit">
+        <span class="mb-1.5 flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] uppercase text-base-600">
+          <i class="block size-[7px] rounded-full" style="background:${hexOf(p.desk)}"></i>${d?.label ?? p.desk}</span>
+        <h3 class="font-display m-0 mb-1.5 text-xl leading-tight font-semibold tracking-[-0.02em] text-balance">${p.title}</h3>
+        <p class="m-0 font-mono text-[13px] text-base-600">${fmtDate(p.date)} · ${p.mins} min read</p>
+      </a></li>`;
+      })
+      .join("");
+
+    build();
+  }
+
+  document
+    .querySelectorAll<HTMLElement>("[data-scatter]")
+    .forEach((el) => !el.dataset.ready && ((el.dataset.ready = "1"), initScatter(el)));
+</script>
+
+<style>
+  .scatter-index :global(.plot-bg) {
+    fill: var(--color-plot);
+  }
+  .scatter-index :global(.ax-line) {
+    stroke: var(--color-base-950);
+    stroke-width: 1.25;
+    fill: none;
+  }
+  .scatter-index :global(.tick) {
+    stroke: var(--color-rule);
+    stroke-width: 1;
+  }
+  .scatter-index :global(.tick-label) {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    fill: var(--color-base-400);
+    letter-spacing: 0.06em;
+  }
+  .scatter-index :global(.ax-label) {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    fill: var(--color-base-950);
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .scatter-index :global(.fit-band) {
+    opacity: 0.085;
+  }
+  .scatter-index :global(.fit-line) {
+    fill: none;
+    stroke-width: 1.5;
+    opacity: 0.6;
+  }
+  .scatter-index :global(.fit-label) {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    opacity: 0.85;
+  }
+  .scatter-index :global(.callout line) {
+    stroke: var(--color-base-950);
+    stroke-width: 1;
+  }
+  .scatter-index :global(.callout text) {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    fill: var(--color-base-950);
+  }
+  .scatter-index :global(.pt) {
+    cursor: pointer;
+  }
+  .scatter-index :global(.pt .halo) {
+    fill: none;
+    stroke-width: 1.25;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .scatter-index :global(.pt:hover .halo),
+  .scatter-index :global(.pt:focus-visible .halo) {
+    opacity: 1;
+  }
+  .scatter-index :global(.pt:focus) {
+    outline: none;
+  }
+  .scatter-index :global(.pt:focus-visible .core) {
+    stroke: var(--color-base-950);
+    stroke-width: 2;
+  }
+  [data-card].is-on {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .scatter-index *,
+    .scatter-index :global(*) {
+      animation-duration: 0.001ms !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+</style>

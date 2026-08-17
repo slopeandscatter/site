@@ -1,0 +1,28 @@
+---
+/**
+ * Wordmark. The five dots are the five riso inks — one per desk — and the line through
+ * them is a fit. The mark is the chart.
+ */
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { getLocalizedRoute } from "@js/translationUtils";
+
+const currLocale = getLocaleFromUrl(Astro.url);
+---
+
+<a
+  class="primary-focus text-foreground font-display flex h-10 items-center gap-2.5 align-middle text-xl font-bold tracking-[-0.03em] uppercase"
+  href={getLocalizedRoute(currLocale, "/")}
+  aria-label="Slope and Scatter — home"
+>
+  <span>Slope</span>
+  <svg width="46" height="17" viewBox="0 0 54 20" aria-hidden="true" class="shrink-0">
+    <line x1="2" y1="16.5" x2="52" y2="4" stroke="currentColor" stroke-width="1.4" opacity="0.5"
+    ></line>
+    <circle cx="7" cy="13" r="2.5" fill="#0090CE"></circle>
+    <circle cx="19" cy="15" r="2.5" fill="#F65058"></circle>
+    <circle cx="30" cy="8" r="2.5" fill="#00A95C"></circle>
+    <circle cx="41" cy="9.5" r="2.5" fill="#9F6DB9"></circle>
+    <circle cx="49" cy="2.8" r="2.5" fill="#BB8B41"></circle>
+  </svg>
+  <span>Scatter</span>
+</a>

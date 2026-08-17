@@ -1,0 +1,104 @@
+---
+/**
+ * Homepage — the index is a scatter plot.
+ *
+ * Points are positioned by publication date against reading time, both derived, so
+ * publishing a piece costs no extra bookkeeping. Filling in the optional analysis
+ * fields on a few pieces makes further axis pairs appear on their own; see
+ * `src/content.config.ts` and `src/components/scatter/ScatterIndex.astro`.
+ */
+import ScatterIndex, { type ScatterPoint } from "@components/scatter/ScatterIndex.astro";
+import { defaultLocale } from "@config/siteSettings.json";
+import { getAllPosts, readingTime } from "@js/blogUtils";
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+// same helper the /blog/[...slug] route uses, so post.id here is the same slug it
+// generates — locale prefix already stripped
+const posts = await getAllPosts(defaultLocale);
+
+const points: ScatterPoint[] = posts.map((post) => ({
+  slug: post.id,
+  title: post.data.title,
+  desk: post.data.desk,
+  date: post.data.pubDate.getTime(),
+  mins: readingTime(post.body),
+  money: post.data.money,
+  cert: post.data.cert,
+  work: post.data.work,
+  surp: post.data.surp,
+  scope: post.data.scope,
+}));
+---
+
+<BaseLayout
+  title="Slope & Scatter"
+  description="Curiosity, costed out. Every piece is a question, a model you can push on, and the full working shown underneath."
+>
+  <div class="mx-auto w-full max-w-6xl px-6">
+    <section class="max-w-[58ch] pt-14 pb-8">
+      <p
+        class="text-base-600 flex items-center gap-2.5 font-mono text-[11.5px] tracking-[0.16em] uppercase"
+      >
+        <span class="bg-riso-scarlet block size-2 rounded-full"></span>
+        Curiosity, costed out
+      </p>
+
+      <h1
+        class="font-display text-base-950 mt-5 text-4xl leading-[1.06] font-semibold tracking-[-0.032em] text-balance md:text-5xl"
+      >
+        We take a question nobody funded, and <em class="text-riso-sky not-italic"
+          >do the arithmetic anyway</em
+        >.
+      </h1>
+
+      <p class="text-base-600 mt-5 max-w-[50ch] text-lg">
+        Every piece is a question, a model you can push on, and the full working shown underneath.
+        Move the assumptions. Watch the answer move.
+      </p>
+    </section>
+
+    <ScatterIndex points={points} />
+
+    <section class="border-base-950 mt-20 border-t pt-8 pb-24">
+      <h2 class="text-base-600 m-0 font-mono text-xs font-medium tracking-[0.14em] uppercase">
+        How a piece is built
+      </h2>
+      <div class="mt-6 grid gap-x-0 gap-y-6 md:grid-cols-4">
+        {
+          [
+            {
+              n: "Step one",
+              h: "The question",
+              p: "Something you'd argue about at a bar, phrased tightly enough to have a number as an answer.",
+            },
+            {
+              n: "Step two",
+              h: "The model",
+              p: "Real unit costs, real rates, stated assumptions. Where the data runs out, we say so and estimate.",
+            },
+            {
+              n: "Step three",
+              h: "Your turn",
+              p: "The model ships as a thing you can drive. Change the route, the wage, the scope. The answer follows.",
+            },
+            {
+              n: "Step four",
+              h: "The receipts",
+              p: "Every source, every fudge factor, every place we could be wrong — at the bottom, in full.",
+            },
+          ].map((step) => (
+            <div class="border-rule pr-6 md:border-r md:last:border-r-0">
+              <span class="text-base-400 block font-mono text-[11px] tracking-[0.14em]">
+                {step.n}
+              </span>
+              <h3 class="font-display text-base-950 mt-2.5 mb-2 text-xl font-semibold tracking-[-0.02em]">
+                {step.h}
+              </h3>
+              <p class="text-base-600 m-0 text-[15px] leading-relaxed">{step.p}</p>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+  </div>
+</BaseLayout>

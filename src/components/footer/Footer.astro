@@ -22,54 +22,23 @@ interface FooterLinkItem {
 }
 
 const quickLinks: FooterLinkItem[] = [
-  { label: "Projects", href: "/projects", newTab: false },
-  { label: "Blog", href: "/blog", newTab: false },
-  { label: "Resume", href: "/resume", newTab: false },
-  { label: "Contact", href: "/#contact", newTab: false },
+  { label: "Every question", href: "/blog/", newTab: false },
+  { label: "Desks", href: "/categories/", newTab: false },
+  { label: "Contact", href: "/contact/", newTab: false },
 ];
 
-const legalLinks: FooterLinkItem[] = [
-  { label: "Corrections", href: "/corrections/" },
-  { label: "Data & code", href: "/data/" },
-];
+// TODO: add Method, Corrections and Data & code links once those pages exist.
+// Linking to them before they are built just ships 404s.
+const legalLinks: FooterLinkItem[] = [{ label: "Privacy", href: "/privacy-policy/" }];
 
-const socialLinks: ComponentProps<typeof SocialIconSimple>[] = [
-  {
-    name: "Twitter",
-    url: "https://x.com/BowTiedWebReapr",
-    icon: "tabler/brand-x",
-  },
-  {
-    name: "Threads",
-    url: "https://www.threads.net/@bowtiedwebreaper",
-    icon: "tabler/brand-threads",
-  },
-  {
-    name: "BlueSky",
-    url: "https://bsky.app/profile/webreaper.dev",
-    icon: "tabler/brand-bluesky",
-  },
-  {
-    name: "GitHub",
-    url: "https://github.com/Boston343",
-    icon: "tabler/brand-github",
-  },
-];
+// TODO: point these at real accounts, or delete the ones that will not exist.
+const socialLinks: ComponentProps<typeof SocialIconSimple>[] = [];
 
 const contactInfo = [
   {
-    value: "contact@example.com",
-    href: "mailto:contact@example.com",
+    value: siteData.author.email,
+    href: `mailto:${siteData.author.email}`,
     icon: "tabler/mail",
-  },
-  {
-    value: "+1 (234) 567-890",
-    href: "tel:+1234567890",
-    icon: "tabler/phone",
-  },
-  {
-    value: "123 Design Street\nCreative City, DC 12345",
-    icon: "tabler/map-pin",
   },
 ];
 ---
@@ -92,7 +61,8 @@ const contactInfo = [
       <div class="flex max-w-sm flex-col items-start">
         <SiteLogo />
         <p class="text-base-600 dark:text-base-400 mt-4">
-          Creating meaningful digital experiences through thoughtful design and innovation.
+          Curiosity-driven data journalism. A question, a model you can push on, and the working
+          shown in full.
         </p>
         <!-- Social Links -->
         <div class="mt-5 flex flex-wrap gap-4">

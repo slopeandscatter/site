@@ -1,0 +1,201 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <style>
+          body {
+            margin: 0;
+            background: #f2f4f0;
+            color: #14181a;
+            font-family: Georgia, "Times New Roman", serif;
+          }
+          a {
+            color: #0090ce;
+          }
+          a:hover {
+            color: #006ba6;
+          }
+          .mono {
+            font-family: ui-monospace, "Consolas", monospace;
+          }
+          .disp {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            letter-spacing: -0.025em;
+            font-weight: 600;
+          }
+          .eyebrow {
+            font-size: 11px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: #5a6360;
+          }
+          .tick {
+            font-size: 10px;
+            fill: #98a19c;
+            letter-spacing: 0.06em;
+            font-family: ui-monospace, "Consolas", monospace;
+          }
+          .axl {
+            font-size: 11px;
+            fill: #14181a;
+            letter-spacing: 0.13em;
+            text-transform: uppercase;
+            font-weight: 500;
+            font-family: ui-monospace, "Consolas", monospace;
+          }
+        </style>
+      </helmet>
+
+      <div style="padding: 34px 38px; display: flex; flex-direction: column; gap: 18px">
+        <div style="display: flex; align-items: baseline; gap: 14px">
+          <div class="mono eyebrow">Plot A</div>
+          <div class="disp" style="font-size: 21px">Same scatter, an axis that separates</div>
+        </div>
+
+        <p style="margin: 0; max-width: 62ch; font-size: 14.5px; line-height: 1.5; color: #5a6360">
+          Reading time barely varies, so every piece lands on one flat line. Swap the y-axis for
+          <strong style="color: #14181a; font-weight: 600">sources cited</strong> — countable from
+          the piece itself, no bookkeeping — and the points spread out. The fit then answers
+          something worth asking: do the expensive questions rest on more evidence, or less?
+        </p>
+
+        <svg viewBox="0 0 820 330" style="width: 100%; height: auto; display: block">
+          <rect x="86" y="14" width="716" height="252" fill="#F8F9F6"></rect>
+          <sc-for list="{{ygrid}}" as="g" hint-placeholder-count="4">
+            <line
+              x1="86"
+              x2="802"
+              y1="{{g.y}}"
+              y2="{{g.y}}"
+              stroke="#C6CEC8"
+              stroke-width="1"
+            ></line>
+            <text class="tick" x="72" y="{{g.ty}}" text-anchor="end">{{g.label}}</text>
+          </sc-for>
+
+          <path d="{{band}}" fill="#14181A" opacity="0.075"></path>
+          <line
+            x1="{{fit.x1}}"
+            y1="{{fit.y1}}"
+            x2="{{fit.x2}}"
+            y2="{{fit.y2}}"
+            stroke="#14181A"
+            stroke-width="1.5"
+            opacity="0.6"
+          ></line>
+
+          <sc-for list="{{pts}}" as="p" hint-placeholder-count="12">
+            <circle cx="{{p.x}}" cy="{{p.y}}" r="7" fill="{{p.hex}}"></circle>
+          </sc-for>
+
+          <line x1="86" y1="266" x2="802" y2="266" stroke="#14181A" stroke-width="1.25"></line>
+          <line x1="86" y1="14" x2="86" y2="266" stroke="#14181A" stroke-width="1.25"></line>
+          <sc-for list="{{xticks}}" as="t" hint-placeholder-count="5">
+            <text class="tick" x="{{t.x}}" y="286" text-anchor="middle">{{t.label}}</text>
+          </sc-for>
+          <text class="axl" x="72" y="10">&#8593; Sources cited</text>
+          <text class="axl" x="802" y="308" text-anchor="end">Published, oldest first &#8594;</text>
+          <text class="tick" x="86" y="308">n = 12 &#183; r = 0.62</text>
+        </svg>
+
+        <p class="mono" style="margin: 0; font-size: 11px; color: #98a19c; letter-spacing: 0.04em">
+          Trade-off: needs a habit of citing links in the piece, and early work may cluster low.
+        </p>
+      </div>
+    </x-dc>
+
+    <script data-dc-script data-props='{"$preview":{"width":900,"height":560}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const INK = {
+            infra: "#0090CE",
+            living: "#F65058",
+            games: "#00A95C",
+            sport: "#9F6DB9",
+            culture: "#BB8B41",
+          };
+          const data = [
+            { d: "culture", src: 20 },
+            { d: "games", src: 19 },
+            { d: "sport", src: 24 },
+            { d: "culture", src: 27 },
+            { d: "infra", src: 35 },
+            { d: "living", src: 15 },
+            { d: "games", src: 18 },
+            { d: "living", src: 22 },
+            { d: "infra", src: 41 },
+            { d: "sport", src: 12 },
+            { d: "living", src: 31 },
+            { d: "sport", src: 9 },
+          ];
+          const L = 86,
+            R = 802,
+            T = 14,
+            B = 266;
+          const sx = (i) => L + ((i + 0.5) / data.length) * (R - L);
+          const sy = (v) => B - (v / 45) * (B - T);
+
+          const pts = data.map((p, i) => ({
+            x: sx(i).toFixed(1),
+            y: sy(p.src).toFixed(1),
+            hex: INK[p.d],
+          }));
+          const ygrid = [0, 15, 30, 45].map((v) => ({
+            y: sy(v).toFixed(1),
+            ty: (sy(v) + 3.5).toFixed(1),
+            label: String(v),
+          }));
+          const labels = ["Jul ’25", "Nov ’25", "Apr ’26", "Sep ’26", "Dec ’26"];
+          const xticks = labels.map((label, k) => ({
+            x: sx((k * (data.length - 1)) / 4).toFixed(1),
+            label,
+          }));
+
+          // least squares over the plotted points
+          const X = data.map((_, i) => sx(i)),
+            Y = data.map((p) => sy(p.src));
+          const n = X.length,
+            mx = X.reduce((a, b) => a + b, 0) / n,
+            my = Y.reduce((a, b) => a + b, 0) / n;
+          let Sxx = 0,
+            Sxy = 0,
+            sse = 0;
+          for (let i = 0; i < n; i++) {
+            Sxx += (X[i] - mx) ** 2;
+            Sxy += (X[i] - mx) * (Y[i] - my);
+          }
+          const b = Sxy / Sxx,
+            a = my - b * mx;
+          for (let i = 0; i < n; i++) sse += (Y[i] - (a + b * X[i])) ** 2;
+          const se = Math.sqrt(sse / (n - 2)),
+            t = 2.23;
+
+          const up = [],
+            lo = [];
+          for (let i = 0; i <= 40; i++) {
+            const x = L + ((R - L) * i) / 40,
+              yh = a + b * x;
+            const dv = t * se * Math.sqrt(1 / n + (x - mx) ** 2 / Sxx);
+            up.push([x, yh - dv]);
+            lo.push([x, yh + dv]);
+          }
+          const P = (q) => q[0].toFixed(1) + " " + q[1].toFixed(1);
+          const band = "M" + up.map(P).join("L") + "L" + lo.reverse().map(P).join("L") + "Z";
+
+          return {
+            pts,
+            ygrid,
+            xticks,
+            band,
+            fit: { x1: L, y1: (a + b * L).toFixed(1), x2: R, y2: (a + b * R).toFixed(1) },
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,172 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <style>
+          body {
+            margin: 0;
+            background: #f2f4f0;
+            color: #14181a;
+            font-family: Georgia, "Times New Roman", serif;
+          }
+          a {
+            color: #0090ce;
+          }
+          a:hover {
+            color: #006ba6;
+          }
+          .mono {
+            font-family: ui-monospace, "Consolas", monospace;
+          }
+          .disp {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            letter-spacing: -0.025em;
+            font-weight: 600;
+          }
+          .eyebrow {
+            font-size: 11px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: #5a6360;
+          }
+          .cap {
+            font-family: ui-monospace, "Consolas", monospace;
+            font-size: 10px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #98a19c;
+          }
+        </style>
+      </helmet>
+
+      <div style="padding: 34px 38px; display: flex; flex-direction: column; gap: 18px">
+        <div style="display: flex; align-items: baseline; gap: 14px">
+          <div class="mono eyebrow">Plot C</div>
+          <div class="disp" style="font-size: 21px">The archive as a printed index</div>
+        </div>
+
+        <p style="margin: 0; max-width: 62ch; font-size: 14.5px; line-height: 1.5; color: #5a6360">
+          Not a chart at all — a catalogue. Every piece is a cell, ordered newest first, coloured by
+          desk. Nothing has to vary for it to look composed, so it holds up on day one and at two
+          hundred pieces. The question titles do the work instead of the axes.
+        </p>
+
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 1px;
+            background: #c6cec8;
+            border: 1px solid #c6cec8;
+          "
+        >
+          <sc-for list="{{cells}}" as="c" hint-placeholder-count="12">
+            <div
+              style="
+                background: #f8f9f6;
+                padding: 14px 15px 15px;
+                display: flex;
+                flex-direction: column;
+                gap: 9px;
+                min-height: 96px;
+              "
+            >
+              <div
+                style="display: flex; align-items: center; justify-content: space-between; gap: 8px"
+              >
+                <span
+                  style="display: block; width: 9px; height: 9px; border-radius: 50%;
+            background: {{c.hex}}"
+                ></span>
+                <span class="cap">{{c.date}}</span>
+              </div>
+              <div class="disp" style="font-size: 13.5px; line-height: 1.25; text-wrap: pretty">
+                {{c.title}}
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <p class="mono" style="margin: 0; font-size: 11px; color: #98a19c; letter-spacing: 0.04em">
+          Trade-off: gives up the scatter entirely — the signature becomes the palette, not the
+          chart.
+        </p>
+      </div>
+    </x-dc>
+
+    <script data-dc-script data-props='{"$preview":{"width":900,"height":560}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const cells = [
+            {
+              title: "What is a fantasy league win worth in unpaid labour?",
+              date: "Dec ’26",
+              hex: "#9F6DB9",
+            },
+            {
+              title: "Can a grocery basket tell you where the border is?",
+              date: "Nov ’26",
+              hex: "#F65058",
+            },
+            {
+              title: "What does one NHL power play cost per second?",
+              date: "Oct ’26",
+              hex: "#9F6DB9",
+            },
+            {
+              title: "What would high-speed rail across Canada cost?",
+              date: "Sep ’26",
+              hex: "#0090CE",
+            },
+            {
+              title: "Which city makes you pay the most to own nothing?",
+              date: "Jul ’26",
+              hex: "#F65058",
+            },
+            {
+              title: "How much of a live-service game is actually live?",
+              date: "May ’26",
+              hex: "#00A95C",
+            },
+            {
+              title: "What does it cost to heat a house you rent badly?",
+              date: "Apr ’26",
+              hex: "#F65058",
+            },
+            {
+              title: "When did the second act stop being the middle?",
+              date: "Feb ’26",
+              hex: "#BB8B41",
+            },
+            {
+              title: "Is a subway station cheaper than the bus route it kills?",
+              date: "Jan ’26",
+              hex: "#0090CE",
+            },
+            {
+              title: "How many esports careers end before a first lease?",
+              date: "Nov ’25",
+              hex: "#9F6DB9",
+            },
+            {
+              title: "Who is paying for the maps in your favourite game?",
+              date: "Sep ’25",
+              hex: "#00A95C",
+            },
+            {
+              title: "How long does a movie have to be to lose money?",
+              date: "Jul ’25",
+              hex: "#BB8B41",
+            },
+          ];
+          return { cells };
+        }
+      }
+    </script>
+  </body>
+</html>

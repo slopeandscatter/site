@@ -19,10 +19,13 @@ import { locales } from "@config/siteSettings.json";
 // console.log(JSON.stringify(navData, null, 2));
 ---
 
-<section
-  id="nav"
-  class="navbar--initial dark bg-background/80 border-border/50 fixed top-0 left-0 z-30 flex w-full flex-col border-b py-3 backdrop-blur-sm transition-all duration-300"
->
+<!--
+  The nav sits ON the paper rather than in a bar over it: no background, no rule, no
+  fixed positioning. The template shipped a dark slab, which read as a different design
+  laid on top of this one. Being in normal flow also means pages no longer have to pay
+  for their own clearance under a fixed header.
+-->
+<section id="nav" class="relative z-20 flex w-full flex-col pt-8 pb-2">
   <div class="mx-auto flex w-full">
     <div class="site-container flex w-full items-center">
       <header class="relative flex w-full items-center gap-2">
@@ -58,8 +61,10 @@ import { locales } from "@config/siteSettings.json";
             </nav>
             <div class="hidden items-center gap-2 md:flex">
               <!-- don't forget to also update the button in MobileNav.astro! -->
-              <Button variant="primary" href="/#newsletter" class="px-4 py-2 whitespace-nowrap"
-                >Subscribe</Button
+              <a
+                href="/#newsletter"
+                class="border-base-950 text-base-950 hover:bg-base-950 hover:text-paper primary-focus border px-3 py-1.5 font-mono text-xs tracking-[0.1em] whitespace-nowrap uppercase transition-colors"
+                >Subscribe</a
               >
 
               <ThemeToggle class="" />

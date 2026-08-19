@@ -3,9 +3,9 @@ import { type SiteDataProps } from "../types/configDataTypes";
 const siteData: SiteDataProps = {
   name: "Slope & Scatter",
   // Your website's title and description (meta fields)
-  title: "Slope & Scatter — curiosity, costed out",
+  title: "Slope & Scatter — curiosity, measured",
   description:
-    "Curiosity-driven data journalism. Every piece is a question, a model you can push on, and the full working shown underneath.",
+    "Questions nobody bothered to measure. Infrastructure, rent, games, sport, film — every piece ships the model behind the answer, and every assumption it rests on.",
 
   // Your information for blog post purposes
   author: {

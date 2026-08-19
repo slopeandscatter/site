@@ -20,6 +20,7 @@ export interface ScatterPoint {
   desk: string;
   date: number; // epoch ms
   mins: number; // derived reading time
+  sources: number; // derived count of distinct external sources cited
   money?: number;
   cert?: number;
   work?: number;
@@ -29,12 +30,25 @@ export interface ScatterPoint {
 
 interface Props {
   points: ScatterPoint[];
+  /** slug of the featured piece — gets the live ring */
+  featuredSlug?: string;
+  /** false when the page renders its own desk index elsewhere (the homepage header) */
+  renderDesks?: boolean;
   class?: string;
 }
 
-const { points, class: className = "" } = Astro.props;
+const { points, featuredSlug, renderDesks = true, class: className = "" } = Astro.props;
 
-const payload = { points, desks };
+const payload = { points, desks, featuredSlug };
+
+// The list is rendered here, at build, rather than by the client script. It is the
+// only interface on small screens AND the fallback when the plot cannot run, so it
+// must exist in the HTML — a list built by JS is no fallback at all.
+const deskOf = new Map(desks.map((d) => [d.id, d]));
+const deskCount = (id: string) => points.filter((p) => p.desk === id).length;
+const byNewest = [...points].sort((a, b) => b.date - a.date);
+const monthYear = (ms: number) =>
+  new Date(ms).toLocaleDateString("en-CA", { month: "short", year: "numeric" });
 ---
 
 {
@@ -86,26 +100,55 @@ const payload = { points, desks };
     </div>
   </div>
 
-  <!-- desks: legend on desktop, filter everywhere -->
-  <div class="border-rule mt-6 flex flex-wrap border-t" role="group" aria-label="Filter by desk">
+  <!-- The chart's key, directly under the figure it belongs to and centred beneath it,
+       the way a printed plot captions itself. Also the filter. -->
+  <div
+    class="border-rule mt-6 flex flex-wrap justify-center gap-x-7 border-t"
+    class:list={[!renderDesks && "hidden"]}
+    role="group"
+    aria-label="Filter by desk"
+  >
     {
       desks.map((desk) => (
         <button
           type="button"
           data-desk={desk.id}
           aria-pressed="false"
-          class="border-rule text-base-600 aria-pressed:text-base-950 focus-visible:outline-riso-sky mr-[18px] flex cursor-pointer items-center gap-2.5 border-r py-3.5 pr-[18px] font-mono text-[11px] tracking-[0.1em] uppercase transition-opacity last:mr-0 last:border-r-0 focus-visible:outline-2 focus-visible:outline-offset-2"
+          title={`${desk.ink} — ${deskCount(desk.id)} pieces`}
+          class="text-base-600 aria-pressed:text-base-950 hover:text-base-950 focus-visible:outline-riso-sky flex cursor-pointer items-center gap-2.5 py-3.5 font-mono text-[11px] tracking-[0.1em] uppercase transition-opacity focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           <span class="block size-2.5 shrink-0 rounded-full" style={`background:${desk.hex}`} />
-          <span class="text-base-400">{desk.ink}</span>
           {desk.label}
+          <span class="text-base-400 tabular-nums">{deskCount(desk.id)}</span>
         </button>
       ))
     }
   </div>
 
-  <!-- the list. the only interface on mobile, and the no-JS fallback everywhere. -->
-  <ul class="border-rule mt-5 border-t md:hidden" data-list></ul>
+  <!-- the list. the only interface on mobile, and the fallback when the plot can't run. -->
+  <ul class="border-rule mt-5 list-none border-t p-0 md:hidden" data-list>
+    {
+      byNewest.map((p) => (
+        <li class="border-rule border-b">
+          <a href={`/blog/${p.slug}/`} class="block py-4 text-inherit no-underline">
+            <span class="text-base-600 mb-1.5 flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] uppercase">
+              <i
+                class="block size-[7px] rounded-full"
+                style={`background:${deskOf.get(p.desk)?.hex ?? "#5A6360"}`}
+              />
+              {deskOf.get(p.desk)?.label ?? p.desk}
+            </span>
+            <h3 class="font-display m-0 mb-1.5 text-xl leading-tight font-semibold tracking-[-0.02em] text-balance">
+              {p.title}
+            </h3>
+            <p class="text-base-600 m-0 font-mono text-[13px]">
+              {monthYear(p.date)} · {p.mins} min read
+            </p>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
 </section>
 
 <script>
@@ -115,6 +158,7 @@ const payload = { points, desks };
     desk: string;
     date: number;
     mins: number;
+    sources: number;
     [k: string]: unknown;
   }
   interface Desk {
@@ -174,12 +218,12 @@ const payload = { points, desks };
     const svg = root.querySelector<SVGSVGElement>("[data-chart]");
     const card = root.querySelector<HTMLElement>("[data-card]");
     const picker = root.querySelector<HTMLElement>("[data-axis-picker]");
-    const list = root.querySelector<HTMLElement>("[data-list]");
-    if (!svg || !card || !picker || !list) return;
+    if (!svg || !card || !picker) return;
 
-    const { points, desks } = JSON.parse(root.dataset.scatterPayload || "{}") as {
+    const { points, desks, featuredSlug } = JSON.parse(root.dataset.scatterPayload || "{}") as {
       points: Pt[];
       desks: Desk[];
+      featuredSlug?: string;
     };
     if (!points?.length) return;
 
@@ -199,25 +243,71 @@ const payload = { points, desks };
       points.filter((p) => typeof p[a] === "number" && typeof p[b] === "number").length >=
       MIN_POINTS;
 
-    const dateAxis = (): Axis => {
-      const [lo, hi] = pad(...span("date"));
-      return { k: "date", label: "Published", fmt: fmtDate, min: lo, max: hi, n: 4 };
+    // Publication ORDER, not elapsed time. A true time axis clusters pieces published
+    // close together and leaves dead space across a quiet month, which says more about
+    // the publishing schedule than about the work. Rank spaces them evenly; the ticks
+    // still carry real dates, and the axis label says "oldest first" so the encoding is
+    // not mistaken for a timeline.
+    const byDate = [...points].sort((a, b) => a.date - b.date);
+    byDate.forEach((p, i) => (p.order = i));
+
+    const orderAxis = (): Axis => {
+      const n = byDate.length;
+      const wanted = Math.min(5, n);
+      const spread = [
+        ...new Set(
+          Array.from({ length: wanted }, (_, i) =>
+            wanted === 1 ? 0 : Math.round((i * (n - 1)) / (wanted - 1)),
+          ),
+        ),
+      ];
+      // Two pieces in the same month would otherwise print the same label twice at
+      // different positions, which reads as a mistake. Keep the first of each label.
+      const seen = new Set<string>();
+      const idx = spread.filter((i) => {
+        const label = fmtDate(byDate[i].date);
+        if (seen.has(label)) return false;
+        seen.add(label);
+        return true;
+      });
+      return {
+        k: "order",
+        label: "Published, oldest first",
+        fmt: (v) => {
+          const p = byDate[Math.round(v)];
+          return p ? fmtDate(p.date) : "";
+        },
+        min: -0.5,
+        max: n - 0.5,
+        n: Math.max(1, idx.length - 1),
+        ticks: idx,
+      };
     };
 
     const views: { x: Axis; y: Axis; name: string }[] = [];
     {
-      // whole-minute ticks — rounding a fractional scale produces labels like 6/5/3/2/0
-      const [, hi] = span("mins");
-      const top = Math.max(2, Math.ceil(hi * 1.15));
-      const step = [1, 2, 5, 10, 15, 30, 60].find((s) => top / s <= 5) ?? Math.ceil(top / 5);
+      /**
+       * Default y is SOURCES CITED. Reading time was here first and was a bad encoding —
+       * it spans about four minutes across the whole archive, so every piece sat on one
+       * flat line. How much evidence a piece rests on actually varies.
+       *
+       * Until pieces cite things there is nothing to plot, so fall back to reading time
+       * rather than drawing a straight line of zeroes and calling it a chart.
+       */
+      const cited = points.filter((p) => (p.sources ?? 0) > 0).length;
+      const useSources = cited >= MIN_POINTS;
+      const key = useSources ? "sources" : "mins";
+      const [, hi] = span(key);
+      const top = Math.max(useSources ? 5 : 2, Math.ceil(hi * 1.15));
+      const step = [1, 2, 5, 10, 15, 20, 25, 50].find((k) => top / k <= 5) ?? Math.ceil(top / 5);
       const max = Math.ceil(top / step) * step;
       views.push({
-        name: "Published × Length",
-        x: dateAxis(),
+        name: useSources ? "Order × Sources" : "Order × Length",
+        x: orderAxis(),
         y: {
-          k: "mins",
-          label: "Minutes to read",
-          fmt: (v) => `${Math.round(v)} min`,
+          k: key,
+          label: useSources ? "Sources cited" : "Minutes to read",
+          fmt: (v) => (useSources ? String(Math.round(v)) : `${Math.round(v)} min`),
           min: 0,
           max,
           n: max / step,
@@ -260,7 +350,7 @@ const payload = { points, desks };
     if (has("date", "scope"))
       views.push({
         name: "Date × Scope",
-        x: dateAxis(),
+        x: orderAxis(),
         y: {
           k: "scope",
           label: "Who it touches",
@@ -309,7 +399,7 @@ const payload = { points, desks };
     const dLo = Math.min(...points.map((p) => p.date));
     const dHi = Math.max(...points.map((p) => p.date));
     const radius = (p: Pt) =>
-      views[view].x.k === "date" || dHi === dLo ? 7 : 5 + ((p.date - dLo) / (dHi - dLo)) * 7.5;
+      views[view].x.k === "order" || dHi === dLo ? 7 : 5 + ((p.date - dLo) / (dHi - dLo)) * 7.5;
     const newest = points.reduce((a, b) => (b.date > a.date ? b : a));
 
     function drawStatic() {
@@ -516,9 +606,37 @@ const payload = { points, desks };
           class: "pt",
           tabindex: "0",
           role: "link",
+          ...(p.slug === featuredSlug ? { "data-featured": "" } : {}),
           "aria-label": `${p.title} — ${deskOf.get(p.desk)?.label ?? p.desk}, published ${fmtDate(p.date)}`,
         }) as any;
         node.appendChild(el("circle", { class: "halo", cx: 0, cy: 0, r: rr + 7, stroke: hex }));
+
+        // The featured piece gets a thin ring that keeps expanding out and fading, so the
+        // eye lands on it without anything else on the page having to shout. Styled inline
+        // because scoped CSS never reaches elements created here, and animated with the
+        // Web Animations API so honouring reduced motion is just not starting it.
+        if (p.slug === featuredSlug) {
+          const pulse = el("circle", { cx: 0, cy: 0, r: rr + 4 }) as SVGCircleElement;
+          pulse.style.fill = "none";
+          pulse.style.stroke = hex;
+          pulse.style.strokeWidth = "1.25";
+          pulse.style.pointerEvents = "none";
+          if (reduce) {
+            pulse.style.strokeOpacity = "0.55";
+          } else {
+            pulse.style.transformBox = "fill-box";
+            pulse.style.transformOrigin = "center";
+            pulse.animate(
+              [
+                { transform: "scale(1)", strokeOpacity: 0.75 },
+                { transform: "scale(2.6)", strokeOpacity: 0 },
+              ],
+              { duration: 2600, iterations: Infinity, easing: "cubic-bezier(.2,.6,.35,1)" },
+            );
+          }
+          node.appendChild(pulse);
+        }
+
         node.appendChild(el("circle", { class: "core", cx: 0, cy: 0, r: rr, fill: hex }));
         // a piece missing this view's data is parked rather than plotted at a lie
         const x = missing ? M.l - 60 : sx(p[v.x.k] as number);
@@ -548,26 +666,33 @@ const payload = { points, desks };
       layers.pts = g;
     }
 
+    /**
+     * The small "Newest" tag from the original sketch. It marks the featured piece, so it
+     * lands on the same point the ring is pulsing around. Because the x-axis is
+     * publication order, that point is always the RIGHTMOST one — so the label reaches
+     * back to the left, where there is room, and can never collide with the axis edge or
+     * with another point's label.
+     */
     function drawCallout() {
-      if (views[view].x.k === "date") return; // date on x already reads left-to-right
       if (layers.call) layers.call.remove();
       const v = views[view];
-      if (typeof newest[v.x.k] !== "number" || typeof newest[v.y.k] !== "number") return;
-      const x = sx(newest[v.x.k] as number),
-        y = sy(newest[v.y.k] as number),
-        rr = radius(newest);
+      const target = points.find((p) => p.slug === featuredSlug) ?? newest;
+      if (typeof target[v.x.k] !== "number" || typeof target[v.y.k] !== "number") return;
+      const x = sx(target[v.x.k] as number),
+        y = sy(target[v.y.k] as number),
+        rr = radius(target);
       const right = x < W - M.r - 150,
         dx = right ? 1 : -1;
       const g = el("g", { class: "callout" });
       g.appendChild(
-        el("line", { x1: x + dx * (rr + 5), y1: y - 5, x2: x + dx * (rr + 24), y2: y - 22 }),
+        el("line", { x1: x + dx * (rr + 5), y1: y - 5, x2: x + dx * (rr + 24), y2: y - 42 }),
       );
       g.appendChild(
-        el("line", { x1: x + dx * (rr + 24), y1: y - 22, x2: x + dx * (rr + 78), y2: y - 22 }),
+        el("line", { x1: x + dx * (rr + 24), y1: y - 42, x2: x + dx * (rr + 78), y2: y - 42 }),
       );
       const tx = el("text", {
         x: x + dx * (rr + 30),
-        y: y - 27,
+        y: y - 47,
         "text-anchor": right ? "start" : "end",
       });
       tx.textContent = "Newest";
@@ -588,7 +713,7 @@ const payload = { points, desks };
         `<dl class="m-0 mb-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-[3px] font-mono text-[11px]">` +
         row(v.x.label, v.x.fmt(p[v.x.k] as number)) +
         row(v.y.label, v.y.fmt(p[v.y.k] as number)) +
-        (v.x.k === "date" ? "" : row("Published", fmtDate(p.date))) +
+        (v.x.k === "order" ? "" : row("Published", fmtDate(p.date))) +
         `</dl>` +
         `<div class="-mx-4 flex justify-between border-t border-rule px-4 py-2.5 font-mono text-[10.5px] tracking-[0.14em] uppercase text-base-950"><span>Read the piece</span><span>&rarr;</span></div>`;
       const rect = svg!.getBoundingClientRect();
@@ -608,6 +733,9 @@ const payload = { points, desks };
       if (layers.call) layers.call.style.opacity = !only || newest.desk === only ? "1" : "0.13";
     }
 
+    /** Anything anchored to a point (the homepage connector) redraws on this. */
+    const announce = () => root.dispatchEvent(new CustomEvent("scatter:layout", { bubbles: true }));
+
     function build() {
       drawStatic();
       fit();
@@ -615,6 +743,7 @@ const payload = { points, desks };
       raise();
       drawCallout();
       first = false;
+      announce();
     }
 
     function retarget() {
@@ -655,6 +784,7 @@ const payload = { points, desks };
       });
       drawCallout();
       applyFilter();
+      announce();
     }
 
     // ------------------------------------------------------------------ controls
@@ -681,10 +811,12 @@ const payload = { points, desks };
       });
     }
 
-    root.querySelectorAll<HTMLButtonElement>("[data-desk]").forEach((b) => {
+    // Page-wide, not root-scoped: the homepage renders its desk index in the header,
+    // outside this component. One scatter per page, so this stays unambiguous.
+    document.querySelectorAll<HTMLButtonElement>("[data-desk]").forEach((b) => {
       b.onclick = () => {
         only = only === b.dataset.desk ? null : b.dataset.desk!;
-        root.querySelectorAll<HTMLButtonElement>("[data-desk]").forEach((o) => {
+        document.querySelectorAll<HTMLButtonElement>("[data-desk]").forEach((o) => {
           o.setAttribute("aria-pressed", String(only === o.dataset.desk));
           o.classList.toggle("opacity-30", !!only && only !== o.dataset.desk);
         });
@@ -693,20 +825,6 @@ const payload = { points, desks };
         applyFilter();
       };
     });
-
-    // list — mobile interface and no-JS fallback
-    list!.innerHTML = [...points]
-      .sort((a, b) => b.date - a.date)
-      .map((p) => {
-        const d = deskOf.get(p.desk);
-        return `<li class="border-b border-rule"><a href="/blog/${p.slug}/" class="block py-4 no-underline text-inherit">
-        <span class="mb-1.5 flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] uppercase text-base-600">
-          <i class="block size-[7px] rounded-full" style="background:${hexOf(p.desk)}"></i>${d?.label ?? p.desk}</span>
-        <h3 class="font-display m-0 mb-1.5 text-xl leading-tight font-semibold tracking-[-0.02em] text-balance">${p.title}</h3>
-        <p class="m-0 font-mono text-[13px] text-base-600">${fmtDate(p.date)} · ${p.mins} min read</p>
-      </a></li>`;
-      })
-      .join("");
 
     build();
   }

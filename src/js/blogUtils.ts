@@ -236,3 +236,36 @@ export function readingTime(body: string | undefined, wpm: number = 200): number
   const words = prose.split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.round(words / wpm));
 }
+
+/**
+ * * Sources cited, counted from the piece's own body at build time.
+ *
+ * This is the homepage scatter's y-axis. Reading time was there first and turned out to
+ * be a poor encoding — it barely varies, so every piece landed on one flat line. How
+ * many sources a piece rests on varies a great deal, needs no frontmatter field, and is
+ * the thing this site claims to care about.
+ *
+ * Counts DISTINCT external URLs, so citing the same StatCan table four times counts
+ * once. Internal links and anchors are not sources.
+ *
+ * @param body raw markdown/MDX source, i.e. `entry.body`
+ */
+export function countSources(body: string | undefined): number {
+  if (!body) return 0;
+  const prose = body.replace(/```[\s\S]*?```/g, ""); // code blocks are not citations
+  const urls = new Set<string>();
+  // markdown links, autolinks, and bare hrefs in embedded JSX/HTML
+  const patterns = [
+    /\]\((https?:\/\/[^)\s]+)\)/g,
+    /<(https?:\/\/[^>\s]+)>/g,
+    /href=["'](https?:\/\/[^"']+)["']/g,
+  ];
+  for (const re of patterns) {
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(prose)) !== null) {
+      // normalise so http/https and a trailing slash don't double-count
+      urls.add(m[1].replace(/^https?:\/\//, "").replace(/[/#?].*$/, "") + new URL(m[1]).pathname);
+    }
+  }
+  return urls.size;
+}

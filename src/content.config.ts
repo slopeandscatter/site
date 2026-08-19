@@ -32,6 +32,11 @@ const blogCollection = defineCollection({
       // number of tags.
       categories: z.array(z.string().optional()).optional(),
 
+      // Pins this piece to the featured box on the homepage, which draws a connector
+      // down into its own point in the scatter. If several are flagged the newest
+      // wins; if none are, the newest piece is featured by default.
+      featured: z.boolean().optional(),
+
       /**
        * Optional analysis metadata.
        *

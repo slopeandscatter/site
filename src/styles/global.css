@@ -139,11 +139,13 @@
 
   /* styles various navbar elements like links, language switcher, dropdowns, theme toggle, etc. */
   .nav__link--base {
-    @apply text-base-900 hover:text-primary dark:text-base-200 leading-tight transition-colors;
+    @apply text-base-600 hover:text-base-950 dark:text-base-400 dark:hover:text-base-100 font-mono text-xs leading-tight tracking-[0.1em] uppercase transition-colors;
   }
 
+  /* matches the max-w-6xl px-6 column the pages use, so the wordmark lines up with
+     the headline instead of sitting 100px to its left */
   .site-container {
-    @apply mx-auto max-w-[1400px] px-4;
+    @apply mx-auto max-w-6xl px-6;
   }
 }
 
@@ -161,5 +163,49 @@
   /* use with "animate-pause" to pause a CSS animation */
   .pause {
     animation-play-state: paused !important;
+  }
+}
+
+@layer base {
+  /**
+   * Plotting paper. A faint 120px graticule under the whole page, with a radial wash
+   * that lets it fade out toward the edges so it never competes with the chart's own
+   * gridlines. This is the ground the riso inks were chosen against.
+   */
+  body {
+    background-image:
+      linear-gradient(var(--color-graticule) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-graticule) 1px, transparent 1px);
+    background-size: 120px 120px;
+    background-position: -1px -1px;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    /* Behind content, above the body's own background. At z-index 0 this fixed layer
+       painted OVER every section that wasn't itself in a stacking context, washing them
+       out toward the foot of the viewport. */
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(120% 90% at 50% 0%, transparent 40%, var(--color-paper) 100%);
+  }
+
+  /* the grid is a paper texture; on a dark ground it just reads as noise */
+  .dark body,
+  html.dark body {
+    background-image: none;
+  }
+
+  .dark body::before,
+  html.dark body::before {
+    background: none;
+  }
+
+  @media (max-width: 767px) {
+    body {
+      background-size: 80px 80px;
+    }
   }
 }

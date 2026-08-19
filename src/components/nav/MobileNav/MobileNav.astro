@@ -100,8 +100,10 @@ import { locales } from "@config/siteSettings.json";
           {locales.length > 1 && <LanguageSelect />}
         </div>
         <!-- don't forget to also update the button in Nav.astro! -->
-        <Button variant="primary" href="/#newsletter" class="w-full whitespace-nowrap"
-          >Subscribe</Button
+        <a
+          href="/#newsletter"
+          class="border-base-950 text-base-950 hover:bg-base-950 hover:text-paper primary-focus block w-full border px-3 py-2 text-center font-mono text-xs tracking-[0.1em] uppercase transition-colors"
+          >Subscribe</a
         >
       </div>
     </div>

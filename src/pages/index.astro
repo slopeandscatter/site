@@ -8,9 +8,11 @@
  * `src/content.config.ts` and `src/components/scatter/ScatterIndex.astro`.
  */
 import ScatterIndex, { type ScatterPoint } from "@components/scatter/ScatterIndex.astro";
+import { desks, getDesk } from "@config/desks";
 import { defaultLocale } from "@config/siteSettings.json";
-import { getAllPosts, readingTime } from "@js/blogUtils";
+import { countSources, getAllPosts, readingTime } from "@js/blogUtils";
 import BaseLayout from "@layouts/BaseLayout.astro";
+import { Image } from "astro:assets";
 
 // same helper the /blog/[...slug] route uses, so post.id here is the same slug it
 // generates — locale prefix already stripped
@@ -22,44 +24,102 @@ const points: ScatterPoint[] = posts.map((post) => ({
   desk: post.data.desk,
   date: post.data.pubDate.getTime(),
   mins: readingTime(post.body),
+  sources: countSources(post.body),
   money: post.data.money,
   cert: post.data.cert,
   work: post.data.work,
   surp: post.data.surp,
   scope: post.data.scope,
 }));
+
+// The featured piece: an explicit `featured: true` wins, newest breaks ties, and with
+// nothing flagged the newest piece is featured anyway — so the box is never empty.
+const byNewest = [...posts].sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+const featured = byNewest.find((p) => p.data.featured) ?? byNewest[0];
+const featuredDesk = featured ? getDesk(featured.data.desk) : undefined;
+const featuredMins = featured ? readingTime(featured.body) : 0;
+
+// The desk index that fills the header: the taxonomy, introduced before the chart that
+// uses it, with real counts rather than decoration.
+const deskCounts = desks.map((desk) => ({
+  ...desk,
+  count: posts.filter((p) => p.data.desk === desk.id).length,
+}));
 ---
 
 <BaseLayout
   title="Slope & Scatter"
-  description="Curiosity, costed out. Every piece is a question, a model you can push on, and the full working shown underneath."
+  description="Questions nobody bothered to measure. Infrastructure, rent, games, sport, film — every piece ships the model behind the answer, and every assumption it rests on."
 >
   <div class="mx-auto w-full max-w-6xl px-6">
-    <section class="max-w-[58ch] pt-14 pb-8">
-      <p
-        class="text-base-600 flex items-center gap-2.5 font-mono text-[11.5px] tracking-[0.16em] uppercase"
-      >
-        <span class="bg-riso-scarlet block size-2 rounded-full"></span>
-        Curiosity, costed out
-      </p>
+    <div class="relative">
+      <div class="relative z-10 pt-10 pb-8 md:pt-14 md:pb-0">
+        <section>
+          <p
+            class="text-base-600 flex items-center gap-2.5 font-mono text-[11.5px] tracking-[0.16em] uppercase"
+          >
+            <span class="bg-riso-scarlet block size-2 rounded-full"></span>
+            Curiosity, measured
+          </p>
 
-      <h1
-        class="font-display text-base-950 mt-5 text-4xl leading-[1.06] font-semibold tracking-[-0.032em] text-balance md:text-5xl"
-      >
-        We take a question nobody funded, and <em class="text-riso-sky not-italic"
-          >do the arithmetic anyway</em
-        >.
-      </h1>
+          <h1
+            class="font-display text-base-950 mt-5 text-[2.6rem] leading-[1.04] font-semibold tracking-[-0.035em] text-pretty md:text-[4.2rem]"
+          >
+            Questions nobody <em class="text-riso-sky not-italic">bothered to measure</em>.
+          </h1>
 
-      <p class="text-base-600 mt-5 max-w-[50ch] text-lg">
-        Every piece is a question, a model you can push on, and the full working shown underneath.
-        Move the assumptions. Watch the answer move.
-      </p>
-    </section>
+          <p class="text-base-600 mt-5 max-w-[78ch] text-lg text-pretty">
+            Infrastructure, rent, games, sport, film — anything with a number hiding in it. Every
+            piece ships the model behind the answer, and every assumption it rests on.
+          </p>
+        </section>
+      </div>
 
-    <ScatterIndex points={points} />
+      <ScatterIndex points={points} featuredSlug={featured?.id} />
+    </div>
 
-    <section class="border-base-950 mt-20 border-t pt-8 pb-24">
+    {
+      /* The featured piece gets its own room rather than a card floating over the chart:
+        the plot is the page's argument, and anything sitting on top of it competes. The
+        "Newest" tag and the pulsing ring in the plot point at this piece. */
+    }
+    {
+      featured && (
+        <section class="border-base-950 mt-16 border-t pt-8">
+          <a
+            href={`/blog/${featured.id}/`}
+            class="group focus-visible:outline-riso-sky block no-underline focus-visible:outline-2 focus-visible:outline-offset-4"
+          >
+            <div class="grid gap-6 md:grid-cols-[minmax(0,7rem)_minmax(0,1fr)] md:gap-12">
+              <p class="text-base-600 flex items-center gap-2.5 font-mono text-[11px] tracking-[0.16em] uppercase md:pt-[0.55rem]">
+                <span
+                  class="block size-2 shrink-0 rounded-full"
+                  style={`background:${featuredDesk?.hex ?? "#5A6360"}`}
+                />
+                Start here
+              </p>
+
+              <div class="max-w-[46ch]">
+                <h2 class="font-display text-base-950 group-hover:text-riso-sky m-0 text-3xl leading-[1.08] font-semibold tracking-[-0.028em] text-balance transition-colors md:text-[2.6rem]">
+                  {featured.data.title}
+                </h2>
+                <p class="text-base-600 mt-4 text-[17px] leading-relaxed">
+                  {featured.data.description}
+                </p>
+                <p class="text-base-950 mt-6 flex items-center gap-5 font-mono text-[11px] tracking-[0.14em] uppercase">
+                  <span>Read the piece &rarr;</span>
+                  <span class="text-base-400">
+                    {featuredDesk?.label ?? featured.data.desk} &middot; {featuredMins} min
+                  </span>
+                </p>
+              </div>
+            </div>
+          </a>
+        </section>
+      )
+    }
+
+    <section class="border-base-950 mt-20 border-t pt-8">
       <h2 class="text-base-600 m-0 font-mono text-xs font-medium tracking-[0.14em] uppercase">
         How a piece is built
       </h2>
@@ -98,6 +158,51 @@ const points: ScatterPoint[] = posts.map((post) => ({
             </div>
           ))
         }
+      </div>
+    </section>
+
+    <!--
+      The nav's Subscribe button points here, so this section must exist.
+      TODO: wire `action` to a real provider. Until then the form is inert and
+      deliberately does not pretend otherwise.
+    -->
+    <section id="newsletter" class="border-rule mt-16 mb-24 border-t pt-8">
+      <div class="grid gap-8 md:grid-cols-[1fr_auto] md:items-end">
+        <div class="max-w-[44ch]">
+          <p
+            class="text-base-600 flex items-center gap-2.5 font-mono text-[11px] tracking-[0.16em] uppercase"
+          >
+            <span class="bg-riso-scarlet block size-2 rounded-full"></span>
+            One question at a time
+          </p>
+          <h2
+            class="font-display text-base-950 mt-4 text-2xl leading-tight font-semibold tracking-[-0.025em] text-balance md:text-3xl"
+          >
+            New piece, the model behind it, and what we got wrong last time.
+          </h2>
+          <p class="text-base-600 mt-3 text-[15px]">
+            No more than one email per piece. Corrections included, not buried.
+          </p>
+        </div>
+
+        <form class="flex w-full max-w-md flex-wrap items-stretch gap-0 md:w-auto">
+          <label class="sr-only" for="newsletter-email">Email address</label>
+          <input
+            id="newsletter-email"
+            type="email"
+            name="email"
+            required
+            autocomplete="email"
+            placeholder="you@example.com"
+            class="border-base-950 bg-plot text-base-950 placeholder:text-base-400 focus-visible:outline-riso-sky min-w-0 flex-1 border px-3.5 py-2.5 font-mono text-[13px] focus-visible:outline-2 focus-visible:outline-offset-2 md:w-64 md:flex-none"
+          />
+          <button
+            type="submit"
+            class="bg-base-950 text-paper hover:bg-riso-sky focus-visible:outline-riso-sky border-base-950 cursor-pointer border border-l-0 px-5 py-2.5 font-mono text-[11px] tracking-[0.12em] uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            Subscribe
+          </button>
+        </form>
       </div>
     </section>
   </div>

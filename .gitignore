@@ -30,3 +30,8 @@ pnpm-debug.log*
 
 # JetBrains IDE
 .idea/
+
+# design canvas: the seeded payload is generated from the .dc.html sources +
+# canvas.json by the design skill's helper — 2 MB of editor code, not source
+design/*.html
+!design/*.dc.html

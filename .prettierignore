@@ -29,3 +29,5 @@ netlify
 
 # Scripts
 scripts/
+# design canvas: a seeded payload — formatting it corrupts the embedded state block
+design/

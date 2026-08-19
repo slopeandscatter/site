@@ -34,8 +34,8 @@ export const dataTranslations = {
  */
 export const textTranslations = {
   en: {
-    hero_text: "We take a question nobody funded, and do the arithmetic anyway.",
-    hero_description: `Every piece is a question, a model you can push on, and the full working shown underneath. Move the assumptions. Watch the answer move.`,
+    hero_text: "Questions nobody bothered to measure.",
+    hero_description: `Infrastructure, rent, games, sport, film — anything with a number hiding in it. Every piece ships the model behind the answer, and every assumption it rests on.`,
     back_to_all_posts: "Back to every question",
     updated: "Updated",
     share_this_article: "Share this piece",

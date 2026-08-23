@@ -1,0 +1,104 @@
+---
+/**
+ * * One desk.
+ *
+ * Every desk gets a page whether or not it has published anything — a desk with nothing
+ * on it is a real editorial fact, not a 404, and the homepage legend links here.
+ */
+import PieceRow from "@components/listing/PieceRow.astro";
+import { desks, getDesk } from "@config/desks";
+import { defaultLocale } from "@config/siteSettings.json";
+import { getAllPosts } from "@js/blogUtils";
+import { getLocaleFromUrl } from "@js/localeUtils";
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+export async function getStaticPaths() {
+  const posts = await getAllPosts(defaultLocale);
+
+  return desks.map((desk) => ({
+    params: { desk: desk.id },
+    props: {
+      deskId: desk.id,
+      posts: posts
+        .filter((p) => p.data.desk === desk.id)
+        .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()),
+    },
+  }));
+}
+
+interface Props {
+  deskId: string;
+  posts: Awaited<ReturnType<typeof getAllPosts>>;
+}
+
+const { deskId, posts } = Astro.props as Props;
+const desk = getDesk(deskId);
+const currLocale = getLocaleFromUrl(Astro.url);
+---
+
+<BaseLayout
+  title={desk?.label ?? deskId}
+  description={desk?.blurb ?? `Pieces from the ${deskId} desk.`}
+>
+  <div class="mx-auto w-full max-w-6xl px-6">
+    <section class="pt-10 pb-8 md:pt-14">
+      <p
+        class="text-ink-muted flex items-center gap-2.5 font-mono text-[11px] tracking-[0.14em] uppercase"
+      >
+        <span
+          class="block size-2 shrink-0 rounded-full"
+          style={`background:${desk?.hex ?? "var(--ink-muted)"}`}
+        />
+        {desk?.ink ?? "Desk"}
+      </p>
+
+      <h1
+        class="font-display text-ink mt-4 text-[2.6rem] leading-[1.04] font-semibold tracking-[-0.035em] text-pretty md:text-[4.2rem]"
+      >
+        {desk?.label ?? deskId}
+      </h1>
+
+      <p class="text-ink-muted mt-5 max-w-[68ch] text-[17px] leading-relaxed">{desk?.blurb}</p>
+    </section>
+
+    {
+      posts.length > 0 ? (
+        <ul class="border-ink m-0 list-none border-t p-0">
+          {posts.map((post) => (
+            <PieceRow post={post} locale={currLocale} showDesk={false} />
+          ))}
+        </ul>
+      ) : (
+        <div class="border-ink border-t pt-10">
+          <p class="text-ink m-0 max-w-[68ch] text-[17px] leading-relaxed">
+            Nothing on this desk yet.
+          </p>
+          <p class="text-ink-muted mt-3 max-w-[68ch] text-[15px] leading-relaxed">
+            It exists because the question it covers is one we intend to ask. If you have one
+            worth measuring,{" "}
+            <a
+              href="/contact/"
+              class="text-ink decoration-rule hover:decoration-riso-sky underline underline-offset-4"
+            >
+              send it
+            </a>
+            .
+          </p>
+        </div>
+      )
+    }
+
+    <nav class="border-rule mt-12 mb-24 flex flex-wrap gap-x-10 gap-y-3 border-t pt-6">
+      <a
+        href="/desks/"
+        class="text-ink hover:text-riso-sky focus-visible:outline-riso-sky font-mono text-[11px] tracking-[0.14em] uppercase no-underline transition-colors focus-visible:outline-2 focus-visible:outline-offset-4"
+        >All desks &rarr;</a
+      >
+      <a
+        href="/blog/"
+        class="text-ink hover:text-riso-sky focus-visible:outline-riso-sky font-mono text-[11px] tracking-[0.14em] uppercase no-underline transition-colors focus-visible:outline-2 focus-visible:outline-offset-4"
+        >Every question &rarr;</a
+      >
+    </nav>
+  </div>
+</BaseLayout>

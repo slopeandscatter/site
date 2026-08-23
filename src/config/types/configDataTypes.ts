@@ -9,6 +9,19 @@ export interface SiteDataProps {
     email: string;
     twitter: string; // used for twitter cards when sharing a blog post on twitter
   };
+  /**
+   * How to reach the PUBLICATION, as distinct from who wrote a given piece.
+   * `author.email` answers "who is this by"; this answers "where do I send a
+   * correction". They are different questions and were previously the same field.
+   */
+  contact: {
+    /** the inbox everything actually lands in */
+    email: string;
+    /** routed aliases, in the order they should be listed */
+    routes: { address: string; purpose: string }[];
+    /** real accounts only — an empty list renders no social section at all */
+    socials: { label: string; url: string }[];
+  };
   defaultImage: {
     src: string;
     alt: string;

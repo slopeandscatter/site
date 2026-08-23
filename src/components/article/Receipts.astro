@@ -1,0 +1,114 @@
+---
+/**
+ * * The receipts.
+ *
+ * Always last, always in full. The method page makes three promises about what appears
+ * here — every source with the date it was accessed, every fudge factor and what it
+ * stands in for, and every place the model could be wrong written by us first — so this
+ * block exists to make skipping one of them feel conspicuous.
+ *
+ * Three named slots rather than one blob, because a reader checking your working is
+ * looking for a specific one of the three and should not have to read the other two.
+ *
+ * Usage in MDX:
+ *
+ *   <Receipts>
+ *     <Fragment slot="sources"> ...a list... </Fragment>
+ *     <Fragment slot="assumptions"> ...a list... </Fragment>
+ *     <Fragment slot="wrong"> ...prose... </Fragment>
+ *   </Receipts>
+ */
+interface Props {
+  /** ISO date the sources were last checked, if the piece has been revisited */
+  checked?: string;
+}
+
+const { checked } = Astro.props as Props;
+
+const hasSources = Astro.slots.has("sources");
+const hasAssumptions = Astro.slots.has("assumptions");
+const hasWrong = Astro.slots.has("wrong");
+---
+
+{/*
+  `breakout`: the receipts are reference material, not prose. Held to the 68ch reading
+  measure the two columns come out around 33ch each, which is too narrow for a source
+  list full of long URLs.
+*/}
+<section
+  aria-label="The receipts"
+  class="breakout border-ink mt-16 border-t-2 pt-8"
+  id="receipts"
+>
+  <h2 class="text-ink-muted m-0 font-mono text-xs font-medium tracking-[0.14em] uppercase">
+    The receipts
+  </h2>
+
+  <div class="mt-8 grid gap-x-12 gap-y-10 lg:grid-cols-2">
+    {
+      hasSources && (
+        <div class="receipts-block lg:col-span-2">
+          <h3 class="font-display text-ink m-0 text-xl font-semibold tracking-[-0.02em]">
+            Sources
+          </h3>
+          <div class="text-ink mt-4 max-w-[68ch] text-[15px] leading-relaxed">
+            <slot name="sources" />
+          </div>
+        </div>
+      )
+    }
+
+    {
+      hasAssumptions && (
+        <div class="receipts-block">
+          <h3 class="font-display text-ink m-0 text-xl font-semibold tracking-[-0.02em]">
+            Assumptions
+          </h3>
+          <div class="text-ink mt-4 max-w-[68ch] text-[15px] leading-relaxed">
+            <slot name="assumptions" />
+          </div>
+        </div>
+      )
+    }
+
+    {
+      hasWrong && (
+        <div class="receipts-block">
+          <h3 class="font-display text-ink m-0 text-xl font-semibold tracking-[-0.02em]">
+            Where we could be wrong
+          </h3>
+          <div class="text-ink mt-4 max-w-[68ch] text-[15px] leading-relaxed">
+            <slot name="wrong" />
+          </div>
+        </div>
+      )
+    }
+  </div>
+
+  {
+    checked && (
+      <p class="text-ink-muted mt-8 font-mono text-[13px]">Sources last checked {checked}.</p>
+    )
+  }
+</section>
+
+<style>
+  /* Lists inside the receipts are references, not prose. Tighter, hanging, mono
+     numerals so a reader scanning for source 14 can find source 14. */
+  .receipts-block :global(ol),
+  .receipts-block :global(ul) {
+    margin: 0;
+    padding-left: 1.75rem;
+  }
+  .receipts-block :global(li) {
+    margin-top: 0.5rem;
+  }
+  .receipts-block :global(li)::marker {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--ink-muted);
+  }
+  .receipts-block :global(a) {
+    overflow-wrap: anywhere;
+  }
+</style>

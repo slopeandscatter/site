@@ -24,7 +24,10 @@ const icon = (() => {
 
 <div
   class:list={[
-    "admonition dark:text-foreground my-3 rounded-lg border-l-4 px-4 py-3",
+    // Square, hairline, full-bordered. Was an 8px radius with a 4px coloured left bar —
+    // the side-tab tell, and a radius the system does not have. An admonition is set
+    // apart by its border and its tint, not by a stripe.
+    "admonition dark:text-foreground my-4 rounded-none border px-4 py-3",
 
     {
       "border-success text-success-foreground bg-success/10 admonition-success": variant === "tip",

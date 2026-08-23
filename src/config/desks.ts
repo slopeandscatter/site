@@ -27,6 +27,8 @@ export interface Desk {
   hex: string;
   /** contrast ratio against the plot ground, for reference */
   contrast: number;
+  /** one line on what belongs here. Shown on the desk index and each desk's page. */
+  blurb: string;
 }
 
 export const desks = [
@@ -36,11 +38,40 @@ export const desks = [
     ink: "Sky Blue",
     hex: "#0090CE",
     contrast: 3.38,
+    blurb: "What things cost to build, and what they cost to not build.",
   },
-  { id: "cost-of-living", label: "Cost of living", ink: "Scarlet", hex: "#F65058", contrast: 3.2 },
-  { id: "games", label: "Games", ink: "Green", hex: "#00A95C", contrast: 2.91 },
-  { id: "sport", label: "Sport", ink: "Violet", hex: "#9F6DB9", contrast: 3.71 },
-  { id: "culture", label: "Culture", ink: "Flat Gold", hex: "#BB8B41", contrast: 2.89 },
+  {
+    id: "cost-of-living",
+    label: "Cost of living",
+    ink: "Scarlet",
+    hex: "#F65058",
+    contrast: 3.2,
+    blurb: "Rent, groceries, bills, wages — the arithmetic of getting by.",
+  },
+  {
+    id: "games",
+    label: "Games",
+    ink: "Green",
+    hex: "#00A95C",
+    contrast: 2.91,
+    blurb: "Games as systems with numbers in them.",
+  },
+  {
+    id: "sport",
+    label: "Sport",
+    ink: "Violet",
+    hex: "#9F6DB9",
+    contrast: 3.71,
+    blurb: "Performance, money, and the gap between them.",
+  },
+  {
+    id: "culture",
+    label: "Culture",
+    ink: "Flat Gold",
+    hex: "#BB8B41",
+    contrast: 2.89,
+    blurb: "Film, music, books, and the economics underneath.",
+  },
 ] as const satisfies readonly Desk[];
 
 export type DeskId = (typeof desks)[number]["id"];

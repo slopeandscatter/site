@@ -1,0 +1,123 @@
+---
+/**
+ * * One piece, as a row in a list.
+ *
+ * The shared unit of every listing surface: /blog/, a desk page, and anywhere else a
+ * set of pieces needs to be scanned rather than plotted.
+ *
+ * A row, not a card. Cards of equal weight are the page structure this design system
+ * explicitly rejects, and they cost real information — a card's fixed height forces the
+ * standfirst to truncate, which is exactly the sentence a reader uses to decide. Rows
+ * separated by hairlines let each piece be as long as it is.
+ *
+ * The metadata is the same three derived numbers the homepage plot encodes: when it was
+ * published, how long it is, how many sources it rests on. Nothing here is typed by
+ * hand.
+ */
+import { getDesk } from "@config/desks";
+import { countSources, readingTime } from "@js/blogUtils";
+import { formatDate } from "@js/textUtils";
+import { Image } from "astro:assets";
+import { type CollectionEntry } from "astro:content";
+
+interface Props {
+  post: CollectionEntry<"blog">;
+  locale: string;
+  /** a desk page already says which desk you are on; the row need not repeat it */
+  showDesk?: boolean;
+  /**
+   * Heading level for the title. A flat list of pieces is h2; a list grouped under
+   * year headings needs h3, or the group and its members come out as siblings and the
+   * grouping is invisible to anyone navigating by heading.
+   */
+  as?: "h2" | "h3";
+}
+
+const { post, locale, showDesk = true, as: Heading = "h2" } = Astro.props as Props;
+const { title, description, pubDate, desk: deskId, heroImage } = post.data;
+
+const desk = getDesk(deskId);
+const mins = readingTime(post.body);
+const sources = countSources(post.body);
+---
+
+{/* The derived metrics ride on the row so the filter/sort bar can work without
+    shipping a second copy of the data as JSON. */}
+<li
+  class="border-rule border-b"
+  data-piece
+  data-desk={deskId}
+  data-date={pubDate.getTime()}
+  data-mins={mins}
+  data-sources={sources}
+>
+  <a
+    href={`/blog/${post.id}/`}
+    class:list={[
+      "group focus-visible:outline-riso-sky block py-7 no-underline focus-visible:outline-2 focus-visible:outline-offset-4",
+      heroImage && "sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,14rem)] sm:items-start sm:gap-8",
+    ]}
+  >
+    <div>
+    {
+      showDesk && (
+        <p class="text-ink-muted m-0 mb-2.5 flex items-center gap-2.5 font-mono text-[11px] tracking-[0.14em] uppercase">
+          <span
+            class="block size-2 shrink-0 rounded-full"
+            style={`background:${desk?.hex ?? "var(--ink-muted)"}`}
+          />
+          {desk?.label ?? deskId}
+        </p>
+      )
+    }
+
+    <Heading class="font-display text-ink group-hover:text-riso-sky m-0 max-w-[34ch] text-2xl leading-[1.1] font-semibold tracking-[-0.025em] text-balance transition-colors md:text-3xl">
+      {title}
+    </Heading>
+
+    <p class="text-ink-muted m-0 mt-3 max-w-[68ch] text-[15px] leading-relaxed">{description}</p>
+
+    <p
+      class="text-ink-muted m-0 mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 font-mono text-[11px] tracking-[0.1em] uppercase"
+    >
+      <time datetime={pubDate.toISOString()}>{formatDate(pubDate, locale)}</time>
+      <span>{mins} min</span>
+      {sources > 0 && <span>{sources} sources</span>}
+    </p>
+    </div>
+
+    {
+      /**
+       * The piece's figure, as the visual anchor.
+       *
+       * A chart is the thing that makes someone curious about a numbers piece, so it is
+       * the right image for a browse surface — and the reason this is a thumbnail beside
+       * the row rather than a card grid is that the standfirst survives. A card's fixed
+       * height truncates the exact sentence a reader uses to decide.
+       *
+       * `aria-hidden`: the link is already named by the title next to it, so announcing
+       * the figure again would just make every row twice as long to hear.
+       */
+      heroImage && (
+        <div class="border-rule bg-plot mt-5 border sm:mt-1">
+          {/*
+            `width`/`height` are explicit because without them Astro uses the image's
+            intrinsic size for the `src` fallback. These originals run to 7360px wide,
+            so anything not picking from the srcset was fetching a multi-megabyte file
+            for a 224px slot.
+          */}
+          <Image
+            src={heroImage}
+            alt=""
+            aria-hidden="true""
+            width={448}
+            height={280}
+            widths={[224, 448]}
+            sizes="(min-width: 640px) 14rem, 100vw"
+            class="block aspect-[16/10] h-auto w-full object-cover"
+          />
+        </div>
+      )
+    }
+  </a>
+</li>

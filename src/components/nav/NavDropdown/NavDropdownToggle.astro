@@ -39,7 +39,7 @@ const { navItem } = Astro.props as Props;
     ]}
   >
     <ul
-      class="bg-background dark:bg-base-900 border-border mt-5 w-fit max-w-xs min-w-[150px] rounded-md border border-solid p-2 whitespace-nowrap drop-shadow-md"
+      class="bg-background dark:bg-base-900 border-border mt-5 w-fit max-w-xs min-w-[150px] rounded-none border border-solid p-2 whitespace-nowrap drop-shadow-md"
     >
       {navItem.dropdown.map((dropdownItem) => <NavLink navItem={dropdownItem} class="w-full" />)}
     </ul>

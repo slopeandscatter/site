@@ -36,12 +36,29 @@ const { title, description } = page.data;
 ---
 
 <BaseLayout title={title} description={description}>
-  <div class="mx-auto mt-24 max-w-3xl px-4 md:mt-36 md:px-8">
-    <div class="mx-auto mb-16 max-w-2xl text-center">
-      <h1 class="h2 mb-4">{title}</h1>
-      <p class="description text-xl opacity-80">{description}</p>
-    </div>
-    <div class="markdown-content mx-auto max-w-3xl py-16 text-sm md:text-base">
+  {/*
+    Same rail, same rhythm, same faces as every other page.
+
+    This template shipped centred, in a max-w-3xl container with px-4, using the
+    inherited `.h2` and `.description` helper classes and a 14px body — four different
+    decisions from the rest of the site, on the two pages (/method/ and
+    /privacy-policy/) where a reader goes to be told how seriously to take us.
+
+    The outer column is the site's max-w-6xl so the left edge lines up with the
+    homepage; the prose inside is held to a 68ch measure, which is the readable width
+    rather than the available one.
+  */}
+  <div class="mx-auto w-full max-w-6xl px-6">
+    <section class="pt-10 pb-8 md:pt-14">
+      <h1
+        class="font-display text-ink text-[2.6rem] leading-[1.04] font-semibold tracking-[-0.035em] text-pretty md:text-[4.2rem]"
+      >
+        {title}
+      </h1>
+      <p class="text-ink-muted mt-5 max-w-[68ch] text-[17px] leading-relaxed">{description}</p>
+    </section>
+
+    <div class="border-ink markdown-content max-w-[68ch] border-t pt-10 pb-24 text-[17px]">
       <Content components={{ a: ExternalLink }} />
     </div>
   </div>

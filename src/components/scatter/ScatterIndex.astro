@@ -5,12 +5,16 @@
  * Each piece is a point. The default view is publication date against reading time,
  * because both are free — nothing has to be recorded by hand for them to work.
  *
- * Extra axis pairs appear automatically once at least MIN_POINTS pieces carry the
- * optional analysis fields (see `src/content.config.ts`). Nothing breaks when they are
- * absent; the picker simply doesn't render until there is something to pick.
+ * The axis pair is fixed and there is no picker. Publication order on x means the
+ * newest piece is always the rightmost point — a stable anchor rather than an index
+ * that rearranges itself. Sources cited on y is the one editorial measure every piece
+ * has regardless of subject. Point size is prose length. All three are derived at
+ * build time, so publishing costs no extra bookkeeping.
  *
- * A least-squares fit with a 95% band on the fitted mean runs through whatever is
- * visible, and recomputes when you filter to a single desk.
+ * A least-squares line runs through whatever is visible and recomputes when you filter
+ * to a single desk. It is always drawn, because it only describes the points on
+ * screen. The 95% band around it is only drawn when the slope clears significance —
+ * see `fit()`.
  */
 import { desks } from "@config/desks";
 
@@ -19,7 +23,8 @@ export interface ScatterPoint {
   title: string;
   desk: string;
   date: number; // epoch ms
-  mins: number; // derived reading time
+  mins: number; // derived reading time, for the list
+  words: number; // derived prose length — the scatter's size encoding
   sources: number; // derived count of distinct external sources cited
   money?: number;
   cert?: number;
@@ -65,43 +70,54 @@ const monthYear = (ms: number) =>
   data-scatter-payload={JSON.stringify(payload)}
 >
   <div class="border-rule flex flex-wrap items-end gap-5 border-b pt-8 pb-3.5">
-    <h2 class="text-base-600 m-0 font-mono text-xs font-medium tracking-[0.14em] uppercase">
+    <h2 class="text-ink-muted m-0 font-mono text-xs font-medium tracking-[0.14em] uppercase">
       Everything we've asked
     </h2>
-    <div
-      class="border-base-950 bg-paper ml-auto hidden border max-md:!hidden"
-      role="group"
-      aria-label="Choose plot axes"
-      data-axis-picker
-    >
-    </div>
+    <p class="text-ink-muted ml-auto m-0 font-mono text-[11px] tracking-[0.06em]">
+      Newest piece is always furthest right
+    </p>
   </div>
 
   <p
-    class="text-base-400 mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[11px] tracking-[0.06em] max-md:hidden"
+    class="text-ink-muted mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[11px] tracking-[0.06em]"
   >
-    <span class="text-base-600 font-medium">Click a point to read the piece.</span>
-    <span>Line is a least-squares fit, shaded to 95%.</span>
+    <span class="text-ink font-medium" data-verb>Click a point to read the piece.</span>
+    {/* The size encoding, explained. It was previously left for the reader to infer. */}
+    <span class="flex items-center gap-2">
+      <svg width="34" height="12" viewBox="0 0 34 12" aria-hidden="true" class="overflow-visible">
+        <circle cx="3" cy="6" r="2.5" fill="currentColor" />
+        <circle cx="14" cy="6" r="4" fill="currentColor" />
+        <circle cx="28" cy="6" r="5.5" fill="currentColor" />
+      </svg>
+      Shorter → longer
+    </span>
+    <span data-fit-note>Line is a least-squares fit through the pieces so far.</span>
   </p>
 
   <!-- the plot. hidden on small screens, where the list below is the real interface -->
-  <div class="relative mt-3.5 max-md:hidden" data-plot>
+  <div class="relative mt-3.5" data-plot>
     <svg
       data-chart
       class="block h-auto w-full overflow-visible"
       role="img"
-      aria-label="Scatter plot of published pieces with a fitted trend line. Each point is one piece."
+      aria-label="Scatter plot of every published piece: publication order against sources cited, with a fitted trend line. Each piece is also a link in the list that follows."
     ></svg>
     <div
       data-card
       aria-hidden="true"
-      class="border-base-950 bg-paper pointer-events-none absolute z-10 w-[300px] translate-y-1 border px-4 pt-3.5 opacity-0 shadow-[6px_6px_0_rgba(20,24,26,0.09)] transition-[opacity,transform] duration-150"
+      class="border-ink bg-paper absolute z-10 w-[min(300px,100%)] translate-y-1 border px-4 pt-3.5 opacity-0 shadow-[6px_6px_0_var(--card-cast)] transition-[opacity,transform] duration-150"
     >
     </div>
   </div>
 
   <!-- The chart's key, directly under the figure it belongs to and centred beneath it,
-       the way a printed plot captions itself. Also the filter. -->
+       the way a printed plot captions itself. Also the filter.
+
+       These buttons carry no `title`. It used to read "Sky Blue — 2 pieces", which
+       became the accessible name and overrode the visible "Infrastructure" — a Label in
+       Name failure (WCAG 2.5.3), so saying "click Infrastructure" to a voice-control
+       tool would not find it. The ink name is visible text instead, which also puts the
+       riso identity on the page where it belongs. -->
   <div
     class="border-rule mt-6 flex flex-wrap justify-center gap-x-7 border-t"
     class:list={[!renderDesks && "hidden"]}
@@ -114,34 +130,41 @@ const monthYear = (ms: number) =>
           type="button"
           data-desk={desk.id}
           aria-pressed="false"
-          title={`${desk.ink} — ${deskCount(desk.id)} pieces`}
-          class="text-base-600 aria-pressed:text-base-950 hover:text-base-950 focus-visible:outline-riso-sky flex cursor-pointer items-center gap-2.5 py-3.5 font-mono text-[11px] tracking-[0.1em] uppercase transition-opacity focus-visible:outline-2 focus-visible:outline-offset-2"
+          class="text-ink-muted aria-pressed:text-ink hover:text-ink focus-visible:outline-riso-sky flex cursor-pointer items-center gap-2.5 py-3.5 font-mono text-[11px] tracking-[0.1em] uppercase transition-opacity focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           <span class="block size-2.5 shrink-0 rounded-full" style={`background:${desk.hex}`} />
+          <span class="text-ink-muted" data-ink-name>{desk.ink}</span>
           {desk.label}
-          <span class="text-base-400 tabular-nums">{deskCount(desk.id)}</span>
+          <span class="text-ink-muted tabular-nums">{deskCount(desk.id)}</span>
         </button>
       ))
     }
   </div>
 
   <!-- the list. the only interface on mobile, and the fallback when the plot can't run. -->
-  <ul class="border-rule mt-5 list-none border-t p-0 md:hidden" data-list>
+  <p class="sr-only" id="scatter-list-intro">
+    Every piece, newest first. This list is the text equivalent of the chart above.
+  </p>
+  <ul
+    class="border-rule mt-5 list-none border-t p-0"
+    data-list
+    aria-describedby="scatter-list-intro"
+  >
     {
       byNewest.map((p) => (
-        <li class="border-rule border-b">
+        <li class="border-rule border-b" data-desk-row={p.desk}>
           <a href={`/blog/${p.slug}/`} class="block py-4 text-inherit no-underline">
-            <span class="text-base-600 mb-1.5 flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] uppercase">
+            <span class="text-ink-muted mb-1.5 flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] uppercase">
               <i
                 class="block size-[7px] rounded-full"
-                style={`background:${deskOf.get(p.desk)?.hex ?? "#5A6360"}`}
+                style={`background:${deskOf.get(p.desk)?.hex ?? "var(--ink-muted)"}`}
               />
               {deskOf.get(p.desk)?.label ?? p.desk}
             </span>
             <h3 class="font-display m-0 mb-1.5 text-xl leading-tight font-semibold tracking-[-0.02em] text-balance">
               {p.title}
             </h3>
-            <p class="text-base-600 m-0 font-mono text-[13px]">
+            <p class="text-ink-muted m-0 font-mono text-[13px]">
               {monthYear(p.date)} · {p.mins} min read
             </p>
           </a>
@@ -149,6 +172,16 @@ const monthYear = (ms: number) =>
       ))
     }
   </ul>
+
+  <!-- Only reachable by filtering to a desk that has not published yet. Named, so it
+       says which filter is empty rather than "no results". -->
+  <p
+    class="text-ink-muted border-rule m-0 border-b py-8 text-center font-mono text-[13px] tracking-[0.06em]"
+    data-list-empty
+    hidden
+  >
+    Nothing on this desk yet. <button type="button" class="text-ink underline underline-offset-4" data-clear-filter>Show every piece</button>
+  </p>
 </section>
 
 <script>
@@ -158,6 +191,7 @@ const monthYear = (ms: number) =>
     desk: string;
     date: number;
     mins: number;
+    words: number;
     sources: number;
     [k: string]: unknown;
   }
@@ -179,6 +213,24 @@ const monthYear = (ms: number) =>
 
   const MIN_POINTS = 4; // fewest points that make a fit worth drawing
 
+  /**
+   * Two-tailed 95% critical values of t, by degrees of freedom.
+   *
+   * Used for two things: the width of the band, and whether the line is drawn at all.
+   * The band was previously computed with a flat t = 2.09, which is the value for
+   * df = 19. At the sizes this chart actually runs (df = 5 for seven pieces, where the
+   * value is 2.571) that understated the interval by about a quarter - a 95% band drawn
+   * narrower than 95%, on a page whose whole pitch is showing the working.
+   */
+  const T95: Record<number, number> = {
+    1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571, 6: 2.447, 7: 2.365, 8: 2.306,
+    9: 2.262, 10: 2.228, 11: 2.201, 12: 2.179, 13: 2.16, 14: 2.145, 15: 2.131,
+    16: 2.12, 17: 2.11, 18: 2.101, 19: 2.093, 20: 2.086, 21: 2.08, 22: 2.074,
+    23: 2.069, 24: 2.064, 25: 2.06, 26: 2.056, 27: 2.052, 28: 2.048, 29: 2.045,
+    30: 2.042,
+  };
+  const tCrit = (df: number) => T95[df] ?? 1.96;
+
   const MONTH = [
     "Jan",
     "Feb",
@@ -197,28 +249,11 @@ const monthYear = (ms: number) =>
     const d = new Date(ms);
     return `${MONTH[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`;
   };
-  const MONEY = [
-    "",
-    "",
-    "$100",
-    "$1k",
-    "$10k",
-    "$100k",
-    "$1M",
-    "$10M",
-    "$100M",
-    "$1B",
-    "$10B",
-    "$100B",
-    "$1T",
-  ];
-  const SCOPE = ["", "one person", "a household", "a city", "an industry", "a country"];
 
   function initScatter(root: HTMLElement) {
     const svg = root.querySelector<SVGSVGElement>("[data-chart]");
     const card = root.querySelector<HTMLElement>("[data-card]");
-    const picker = root.querySelector<HTMLElement>("[data-axis-picker]");
-    if (!svg || !card || !picker) return;
+    if (!svg || !card) return;
 
     const { points, desks, featuredSlug } = JSON.parse(root.dataset.scatterPayload || "{}") as {
       points: Pt[];
@@ -228,7 +263,13 @@ const monthYear = (ms: number) =>
     if (!points?.length) return;
 
     const deskOf = new Map(desks.map((d) => [d.id, d]));
-    const hexOf = (id: string) => deskOf.get(id)?.hex ?? "#5A6360";
+
+    // Themed ink, for the one place that needs a literal value in JS.
+    const cssVar = (name: string, fallback: string) =>
+      getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+    const inkMuted = () => cssVar("--ink-muted", "#5A6360");
+
+    const hexOf = (id: string) => deskOf.get(id)?.hex ?? inkMuted();
 
     // ---------------------------------------------------------------- axis views
     const span = (k: string) => {
@@ -284,101 +325,135 @@ const monthYear = (ms: number) =>
       };
     };
 
-    const views: { x: Axis; y: Axis; name: string }[] = [];
-    {
-      /**
-       * Default y is SOURCES CITED. Reading time was here first and was a bad encoding —
-       * it spans about four minutes across the whole archive, so every piece sat on one
-       * flat line. How much evidence a piece rests on actually varies.
-       *
-       * Until pieces cite things there is nothing to plot, so fall back to reading time
-       * rather than drawing a straight line of zeroes and calling it a chart.
-       */
-      const cited = points.filter((p) => (p.sources ?? 0) > 0).length;
-      const useSources = cited >= MIN_POINTS;
-      const key = useSources ? "sources" : "mins";
-      const [, hi] = span(key);
-      const top = Math.max(useSources ? 5 : 2, Math.ceil(hi * 1.15));
-      const step = [1, 2, 5, 10, 15, 20, 25, 50].find((k) => top / k <= 5) ?? Math.ceil(top / 5);
-      const max = Math.ceil(top / step) * step;
-      views.push({
-        name: useSources ? "Order × Sources" : "Order × Length",
+    /**
+     * ONE axis pair, permanently.
+     *
+     * x is publication order, y is sources cited, and neither is switchable. Two
+     * reasons, and the second is the important one:
+     *
+     *   1. An axis picker asks the reader to understand three encodings to read one
+     *      chart, and an index that rearranges itself under you is not an index.
+     *
+     *   2. Nothing subject-specific generalises. Dollars at stake is meaningful for a
+     *      piece about transit funding and meaningless for one about how long a game
+     *      takes to finish; some pieces have no headline quantity at all. An axis that
+     *      is blank for a third of the archive is not an axis. Order and sourcing are
+     *      structural — every piece has both, whatever it is about — so they are the
+     *      only pair that can be the permanent frame.
+     *
+     * Both are derived at build time, so publishing costs no extra bookkeeping.
+     */
+    const orderCount = byDate.length;
+    const views: { x: Axis; y: Axis; name: string }[] = [
+      {
+        name: "Order × Sources",
         x: orderAxis(),
-        y: {
-          k: key,
-          label: useSources ? "Sources cited" : "Minutes to read",
-          fmt: (v) => (useSources ? String(Math.round(v)) : `${Math.round(v)} min`),
-          min: 0,
-          max,
-          n: max / step,
-          ticks: Array.from({ length: max / step + 1 }, (_, i) => i * step),
-        },
-      });
-    }
-    if (has("money", "cert"))
-      views.push({
-        name: "Money × Certainty",
-        x: {
-          k: "money",
-          label: "Dollars at stake",
-          fmt: (v) => MONEY[Math.round(v)] ?? "",
-          ...axisRange("money", 5),
-        },
-        y: {
-          k: "cert",
-          label: "How sure we are",
-          fmt: (v) => `${Math.round(v)}%`,
-          ...axisRange("cert", 4),
-        },
-      });
-    if (has("work", "surp"))
-      views.push({
-        name: "Work × Surprise",
-        x: {
-          k: "work",
-          label: "Hours of research",
-          fmt: (v) => `${Math.round(v)}h`,
-          ...axisRange("work", 3),
-        },
-        y: {
-          k: "surp",
-          label: "Distance from the guess",
-          fmt: (v) => `${Math.round(v)}%`,
-          ...axisRange("surp", 4),
-        },
-      });
-    if (has("date", "scope"))
-      views.push({
-        name: "Date × Scope",
-        x: orderAxis(),
-        y: {
-          k: "scope",
-          label: "Who it touches",
-          fmt: (v) => SCOPE[Math.round(v)] ?? "",
-          min: 0.6,
-          max: 5.4,
-          n: 4,
-          ticks: [1, 2, 3, 4, 5],
-        },
-      });
-
-    function axisRange(k: string, n: number) {
-      const [lo, hi] = pad(...span(k));
-      return { min: lo, max: hi, n };
-    }
+        y: (() => {
+          const [, hi] = span("sources");
+          const top = Math.max(5, Math.ceil(hi * 1.15));
+          const step = [1, 2, 5, 10, 15, 20, 25, 50].find((k) => top / k <= 5) ?? Math.ceil(top / 5);
+          const max = Math.ceil(top / step) * step;
+          return {
+            k: "sources",
+            label: "Sources cited",
+            fmt: (v: number) => String(Math.round(v)),
+            // Domain floor sits slightly below zero so a piece citing nothing renders
+            // as a point resting ON the axis rather than a half-disc clipped by it.
+            // The ticks still start at 0, so the scale does not lie about where zero is.
+            min: -max * 0.06,
+            max,
+            n: max / step,
+            ticks: Array.from({ length: max / step + 1 }, (_, i) => i * step),
+          };
+        })(),
+      },
+    ];
+    void orderCount;
 
     // ------------------------------------------------------------------- drawing
-    const W = 1000,
-      H = 440,
-      M = { t: 30, r: 26, b: 58, l: 104 };
+    /**
+     * Two layouts, one encoding.
+     *
+     * The phone does not get a different chart, a summarised chart, or no chart. It
+     * gets the same axes and the same marks in a portrait frame, because the plot IS
+     * the index — dropping it below md would mean the site's whole argument only
+     * exists on a desktop.
+     *
+     * Everything downstream works in viewBox units, so switching layout is switching
+     * these numbers and redrawing. Type needs no scaling between the two: they render
+     * at a similar px-per-unit (~1.10 landscape, ~0.95 portrait). What does differ is
+     * the hand-tuned geometry, so the gaps and the callout arm are named per layout
+     * rather than baked into the drawing code.
+     */
+    // Kept in step with the @container query at the foot of this file — both read the
+    // section's own width, so the plot's frame and the list's visibility never disagree.
+    const PORTRAIT_MAX = 767;
+    const LANDSCAPE = {
+      name: "landscape",
+      W: 1000,
+      H: 440,
+      M: { t: 30, r: 26, b: 58, l: 104 }, // l is a starting value; drawStatic measures it
+      minLeft: 34, // never tighter than this, however short the labels get
+      yGap: 14, // y tick label -> axis
+      xGap: 21, // x tick label -> axis
+      titleGap: 45, // axis title / fit label baseline below the axis
+      arm: [24, 78, 42, 150] as const, // callout: rise, reach, lift, min room to the right
+      xTicks: 5,
+      dot: 7,
+      hit: 0,
+    };
+    const PORTRAIT = {
+      name: "portrait",
+      W: 360,
+      H: 480,
+      // A narrow frame cannot afford a 104-unit gutter. The y labels are short
+      // ("8", "6 min") so 40 is enough, and the bottom grows instead, to carry the
+      // axis title and the fit label on separate lines.
+      M: { t: 22, r: 12, b: 74, l: 44 },
+      minLeft: 26,
+      yGap: 8,
+      xGap: 18,
+      // Two lines below the axis in portrait: the axis title, then the fit label under
+      // it. There is no room to sit them at opposite ends of the same baseline.
+      titleGap: 40,
+      arm: [16, 46, 30, 130] as const,
+      xTicks: 3,
+      dot: 5.5,
+      // The visible dot stays the size the encoding wants; this invisible circle is
+      // what a thumb actually hits. 20 viewBox units at this scale is ~46 CSS px.
+      // Target radius in viewBox units. At the portrait scale (~0.95 px per unit) 24
+      // units is a 45.6px target, clearing the 44px guidance. It is a TARGET rather
+      // than a value because it gets clamped below — see `hitRadius`.
+      hit: 24,
+    };
+
+    const layoutFor = () =>
+      root.clientWidth && root.clientWidth <= PORTRAIT_MAX ? PORTRAIT : LANDSCAPE;
+
+    let L = layoutFor();
+    let W = L.W,
+      H = L.H,
+      M = { ...L.M };
+
     const NS = "http://www.w3.org/2000/svg";
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Pointer type, not screen size: a touch laptop is wide and still cannot hover.
+    const coarse = matchMedia("(hover: none)").matches;
     let view = 0,
       only: string | null = null,
       first = true;
     const layers: Record<string, any> = {};
 
-    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    const applyLayout = () => {
+      L = layoutFor();
+      W = L.W;
+      H = L.H;
+      // A COPY. drawStatic() narrows M.l to fit the actual tick labels, and mutating
+      // the shared layout constant would carry that measurement into the other layout.
+      M = { ...L.M };
+      svg!.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    };
+    applyLayout();
 
     const el = (n: string, a: Record<string, any> = {}) => {
       const e = document.createElementNS(NS, n);
@@ -394,17 +469,88 @@ const monthYear = (ms: number) =>
       return H - M.b - ((v - a.min) / (a.max - a.min)) * (H - M.t - M.b);
     };
 
-    // Point size encodes recency — but only when date is not already an axis,
-    // where it would just restate the x position.
-    const dLo = Math.min(...points.map((p) => p.date));
-    const dHi = Math.max(...points.map((p) => p.date));
-    const radius = (p: Pt) =>
-      views[view].x.k === "order" || dHi === dLo ? 7 : 5 + ((p.date - dLo) / (dHi - dLo)) * 7.5;
+    /**
+     * Point size encodes LENGTH.
+     *
+     * It used to encode recency, which had to switch itself off whenever date was on
+     * the x-axis — and since publication order is now the permanent x-axis, that meant
+     * permanently off, every point the same size. Length is independent of both axes,
+     * so the third dimension is always live and always says something: how long the
+     * piece is, next to how well sourced it is.
+     *
+     * Area, not radius, is proportional to the value. Radius-proportional circles
+     * overstate large values by the square, which is the oldest way to lie with a
+     * bubble chart.
+     */
+    /**
+     * Touch target radius.
+     *
+     * A 44px target is worse than a smaller one if two of them overlap: a thumb lands
+     * on whichever happens to be on top and opens the wrong piece, and the reader
+     * cannot even tell that is what happened. So the target is clamped to half the gap
+     * between adjacent points, and non-overlap wins.
+     *
+     * That still clears WCAG 2.5.8 Target Size (Minimum, AA) at 24px with room to
+     * spare. The 44px figure is 2.5.5 (Enhanced, AAA), which is unreachable at this
+     * point density by definition — and 2.5.8 is satisfied anyway by the equivalent
+     * list of links directly below the chart.
+     *
+     * The x-axis is publication order, so that gap is uniform and easy to compute. As
+     * the archive grows the targets shrink; at the density where they get genuinely
+     * small the list underneath is the honest interface anyway, and it is already
+     * there.
+     */
+    const hitRadius = () => {
+      if (!L.hit) return 0;
+      // Measured off the scale, not inferred from the plot width: the order axis pads
+      // its domain by half a step at each end, so the points span (n-1)/n of the area
+      // and dividing the width by n-1 overestimates the gap — which is how the first
+      // version of this produced overlapping targets.
+      const gap = Math.abs(sx(1) - sx(0));
+      return gap ? Math.min(L.hit, gap / 2) : L.hit;
+    };
+
+    const wLo = Math.min(...points.map((p) => p.words));
+    const wHi = Math.max(...points.map((p) => p.words));
+    const radius = (p: Pt) => {
+      const rMin = L.dot * 0.62,
+        rMax = L.dot * 2.4;
+      if (wHi === wLo) return (rMin + rMax) / 2;
+      const t = (p.words - wLo) / (wHi - wLo);
+      return Math.sqrt(rMin * rMin + t * (rMax * rMax - rMin * rMin));
+    };
     const newest = points.reduce((a, b) => (b.date > a.date ? b : a));
+
+    /**
+     * Width of one monospace character at the tick-label size, in viewBox units.
+     * IBM Plex Mono at 10px measures exactly 6.6 units per glyph in this frame, which
+     * is checkable: "0" renders 6.6 wide and "20" renders 13.2.
+     */
+    const CH = 6.6;
 
     function drawStatic() {
       svg!.textContent = "";
       const v = views[view];
+
+      /**
+       * The left gutter is measured, not declared.
+       *
+       * It was a hard-coded 104 units, sized for a y-axis that no longer exists. With
+       * "Sources cited" the widest label is "20" at 13.2 units, so 77 of those 104 —
+       * three quarters of the gutter — held nothing at all, and the plot gave up 8% of
+       * its width to it. Deriving it from the labels also means a future axis whose
+       * ticks read "1,200" or "6 min" gets the room it needs without anyone
+       * remembering to widen a constant.
+       *
+       * The y-axis TITLE is not accounted for here: it sits above the plot area, not
+       * in the gutter, so it never constrained this number.
+       */
+      const yTexts = (
+        v.y.ticks ?? Array.from({ length: v.y.n + 1 }, (_, i) => v.y.min + ((v.y.max - v.y.min) * i) / v.y.n)
+      ).map((t) => v.y.fmt(t));
+      const widest = Math.max(0, ...yTexts.map((t) => t.length)) * CH;
+      M.l = Math.max(L.minLeft, Math.ceil(widest + L.yGap + 6));
+
       const defs = el("defs"),
         cp = el("clipPath", { id: "plotclip" });
       cp.appendChild(el("rect", { x: M.l, y: M.t, width: W - M.l - M.r, height: H - M.t - M.b }));
@@ -429,19 +575,37 @@ const monthYear = (ms: number) =>
         g.appendChild(el("line", { class: "tick", x1: M.l, x2: W - M.r, y1: y, y2: y }));
         const lb = el("text", {
           class: "tick-label",
-          x: M.l - 14,
+          x: M.l - L.yGap,
           y: y + 3.5,
           "text-anchor": "end",
         });
         lb.textContent = v.y.fmt(yv);
         g.appendChild(lb);
       });
-      vals(v.x).forEach((xv) => {
+      // A portrait frame cannot carry five date labels without them touching, so drop
+      // to an evenly spaced subset rather than letting them overlap or truncate.
+      const xv0 = vals(v.x);
+      // Evenly spaced and always including BOTH ends. A plain `i % step` drops the last
+      // label whenever the count does not divide, which on an "oldest first" axis means
+      // losing the newest date — the exact end the callout is pointing at.
+      const xvs =
+        xv0.length <= L.xTicks
+          ? xv0
+          : [
+              ...new Set(
+                Array.from({ length: L.xTicks }, (_, i) =>
+                  Math.round((i * (xv0.length - 1)) / (L.xTicks - 1)),
+                ),
+              ),
+            ].map((i) => xv0[i]);
+      xvs.forEach((xv, i) => {
+        // End labels anchor inward so they stay inside the plot on a narrow frame.
+        const anchor = i === 0 ? "start" : i === xvs.length - 1 ? "end" : "middle";
         const lb = el("text", {
           class: "tick-label",
           x: sx(xv),
-          y: H - M.b + 21,
-          "text-anchor": "middle",
+          y: H - M.b + L.xGap,
+          "text-anchor": L.name === "portrait" ? anchor : "middle",
         });
         lb.textContent = v.x.fmt(xv);
         g.appendChild(lb);
@@ -456,14 +620,17 @@ const monthYear = (ms: number) =>
       const xl = el("line", { class: "ax-line", x1: M.l, y1: H - M.b, x2: W - M.r, y2: H - M.b });
       ax.appendChild(yl);
       ax.appendChild(xl);
+      // Landscape puts the axis title at the right end of the baseline, with the fit
+      // label at the left end of the same line. Portrait has no room for two things on
+      // one line, so the title takes the line and the fit label drops below it.
       const xt = el("text", {
         class: "ax-label",
-        x: W - M.r,
-        y: H - M.b + 45,
-        "text-anchor": "end",
+        x: L.name === "portrait" ? M.l : W - M.r,
+        y: H - M.b + L.titleGap,
+        "text-anchor": L.name === "portrait" ? "start" : "end",
       });
       xt.textContent = `${v.x.label} →`;
-      const yt = el("text", { class: "ax-label", x: M.l - 14, y: M.t - 13 });
+      const yt = el("text", { class: "ax-label", x: M.l - L.yGap, y: M.t - 13 });
       yt.textContent = `↑ ${v.y.label}`;
       ax.appendChild(xt);
       ax.appendChild(yt);
@@ -500,7 +667,10 @@ const monthYear = (ms: number) =>
           typeof p[v.x.k] === "number" &&
           typeof p[v.y.k] === "number",
       );
-      if (pts.length < MIN_POINTS) return;
+      if (pts.length < MIN_POINTS) {
+        note(`n = ${pts.length}`, "Too few pieces to fit a line.");
+        return;
+      }
 
       const X = pts.map((p) => sx(p[v.x.k] as number));
       const Y = pts.map((p) => sy(p[v.y.k] as number));
@@ -515,14 +685,43 @@ const monthYear = (ms: number) =>
         Sxy += (X[i] - mx) * (Y[i] - my);
         Syy += (Y[i] - my) ** 2;
       }
-      if (!Sxx || !Syy) return;
+      if (!Sxx || !Syy) {
+        note(`n = ${n}`, "Every piece sits at the same value — nothing to fit.");
+        return;
+      }
       const b = Sxy / Sxx,
         a = my - b * mx;
       const r = Sxy / Math.sqrt(Sxx * Syy);
       let sse = 0;
       for (let i = 0; i < n; i++) sse += (Y[i] - (a + b * X[i])) ** 2;
       const se = Math.sqrt(sse / (n - 2));
-      const t = 2.09; // ~95% for small n
+      const df = n - 2;
+      const t = tCrit(df);
+      const rTxt = (-r).toFixed(2).replace("-", "−");
+
+      /**
+       * Is the slope distinguishable from zero at all?
+       *
+       * Drawing a confident-looking line and a shaded band through a cloud with r near
+       * zero asserts a relationship the data does not support. That is exactly the
+       * thing this publication says it does not do, so it must not do it on its own
+       * front page. n and r stay on display either way - the reader is still told what
+       * was measured; they are just not shown a trend that is not there.
+       */
+      /**
+       * Two different objects with two different standards of proof.
+       *
+       * The LINE is descriptive. It is the least-squares fit through the pieces on
+       * screen and claims nothing beyond them, so it is always drawn — there is no
+       * such thing as an unsupported summary of data the reader can see.
+       *
+       * The BAND is inferential. It claims a range for a relationship that outlives
+       * this sample, and at r near zero that claim is not supported. So the band is
+       * conditional on the slope clearing 95%%, and the note underneath says which of
+       * the two you are looking at rather than leaving you to assume.
+       */
+      const tStat = Math.abs(r) >= 1 ? Infinity : Math.abs(r) * Math.sqrt(df / (1 - r * r));
+      const solid = tStat > t;
 
       const x0 = Math.min(...X) - 16,
         x1 = Math.max(...X) + 16;
@@ -536,45 +735,82 @@ const monthYear = (ms: number) =>
         up.push([x, yh - d]);
         lo.push([x, yh + d]);
       }
-      const col = only ? hexOf(only) : "#14181A";
+      // Only a desk filter pins a colour. With no filter the fit is drawn in the page's
+      // ink, and that is left to CSS (.fit-line / .fit-band / .fit-label default to
+      // var(--ink)) rather than baked into an attribute — otherwise switching theme
+      // would leave a light-ink regression line sitting on the dark sheet until the
+      // next redraw.
+      const col = only ? hexOf(only) : null;
       const P = (p: [number, number]) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`;
-      layers.fit.appendChild(
-        el("path", {
-          class: "fit-band",
-          fill: col,
-          d: `M${up.map(P).join("L")}L${lo.reverse().map(P).join("L")}Z`,
-        }),
-      );
+      if (solid)
+        layers.fit.appendChild(
+          el("path", {
+            class: "fit-band",
+            ...(col ? { fill: col } : {}),
+            d: `M${up.map(P).join("L")}L${lo.reverse().map(P).join("L")}Z`,
+          }),
+        );
 
       const line = el("line", {
-        class: "fit-line",
+        class: solid ? "fit-line" : "fit-line is-provisional",
         x1: x0,
         y1: a + b * x0,
         x2: x1,
         y2: a + b * x1,
-        stroke: col,
+        ...(col ? { stroke: col } : {}),
       });
       layers.fit.appendChild(line);
       if (!reduce) {
-        const len = Math.hypot(x1 - x0, b * (x1 - x0));
-        (line as any).style.strokeDasharray = len;
-        line.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], {
-          duration: 700,
-          delay: first ? 840 : 280,
-          easing: "cubic-bezier(.3,.7,.3,1)",
-          fill: "backwards",
-        });
+        if (solid) {
+          // Draw-on. Only available to the solid line: the dash pattern is the
+          // animation, so it cannot also be the "provisional" signal.
+          const len = Math.hypot(x1 - x0, b * (x1 - x0));
+          (line as any).style.strokeDasharray = len;
+          line.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], {
+            duration: 700,
+            delay: first ? 840 : 280,
+            easing: "cubic-bezier(.3,.7,.3,1)",
+            fill: "backwards",
+          });
+        } else {
+          // The dashed line keeps its dashes and fades in instead.
+          line.animate([{ opacity: 0 }, { opacity: 1 }], {
+            duration: 600,
+            delay: first ? 840 : 280,
+            easing: "cubic-bezier(.3,.7,.3,1)",
+            fill: "backwards",
+          });
+        }
       }
-      // parked outside the plot so it can never sit on top of a point
+      note(
+        `n = ${n} · r = ${rTxt}`,
+        solid
+          ? "Line is a least-squares fit, shaded to 95%."
+          : "Line is a least-squares fit. Too few pieces to shade it yet.",
+        col,
+      );
+    }
+
+    /**
+     * The fit's readout, and the sentence above the chart that describes it.
+     *
+     * Parked outside the plot so it can never sit on top of a point. Both live in one
+     * function because they have to agree: the header used to promise "a least-squares
+     * fit, shaded to 95%" whether or not a line had actually been drawn.
+     */
+    function note(label: string, explain: string, col?: string | null) {
       const lab = el("text", {
         class: "fit-label",
         x: M.l,
-        y: H - M.b + 45,
-        fill: col,
+        y: H - M.b + (L.name === "portrait" ? L.titleGap + 17 : L.titleGap),
+        ...(col ? { fill: col } : {}),
         "text-anchor": "start",
       });
-      lab.textContent = `n = ${n} · r = ${(-r).toFixed(2).replace("-", "−")}`;
+      lab.textContent = label;
       layers.rlabel = lab;
+
+      const target = root.querySelector("[data-fit-note]");
+      if (target) target.textContent = explain;
     }
 
     const raise = () => layers.rlabel && svg!.appendChild(layers.rlabel);
@@ -582,33 +818,54 @@ const monthYear = (ms: number) =>
     function bind(node: any, p: Pt) {
       const show = () => showCard(p, node._x, node._y);
       const hide = () => card!.classList.remove("is-on");
-      node.onmouseenter = show;
-      node.onmouseleave = hide;
-      node.onfocus = show;
-      node.onblur = hide;
-      node.onclick = () => (location.href = `/blog/${p.slug}/`);
-      node.onkeydown = (e: KeyboardEvent) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          location.href = `/blog/${p.slug}/`;
-        }
-      };
+      const go = () => (location.href = `/blog/${p.slug}/`);
+
+      // No focus/keydown handlers: the mark is aria-hidden and not in the tab order.
+      // Keyboard and assistive tech reach every piece through the list instead.
+      if (coarse) {
+        /**
+         * On touch there is no hover, so a bare click handler turns a 5px dot into a
+         * navigation you cannot preview and cannot take back. Tap opens the card
+         * instead; the card carries the actual link. Two deliberate taps, no
+         * mis-navigation, and the preview a mouse gets for free.
+         */
+        node.onclick = (e: Event) => {
+          e.stopPropagation();
+          show();
+        };
+      } else {
+        node.onmouseenter = show;
+        node.onmouseleave = hide;
+        node.onclick = go;
+      }
     }
 
     function drawPoints() {
       const v = views[view];
+      const hitR = hitRadius();
       const g = el("g");
       points.forEach((p, i) => {
         const hex = hexOf(p.desk),
           rr = radius(p);
         const missing = typeof p[v.x.k] !== "number" || typeof p[v.y.k] !== "number";
+        /**
+         * No tabindex, no role, aria-hidden.
+         *
+         * These used to be `<g role="link" tabindex="0">` with an aria-label, which
+         * looked accessible and was not: measured in Chrome, marks inside an <svg> do
+         * not reach the accessibility tree at all, so the labels were discarded while
+         * the tab stops remained. A keyboard user got seven silent stops that showed
+         * nothing; a screen-reader user got the alt text and no way into any piece.
+         *
+         * The marks are now honestly decorative and the list below carries every piece
+         * as a real link. One path that works beats two that half-work.
+         */
         const node = el("g", {
           class: "pt",
-          tabindex: "0",
-          role: "link",
+          "aria-hidden": "true",
           ...(p.slug === featuredSlug ? { "data-featured": "" } : {}),
-          "aria-label": `${p.title} — ${deskOf.get(p.desk)?.label ?? p.desk}, published ${fmtDate(p.date)}`,
         }) as any;
+        if (hitR) node.appendChild(el("circle", { class: "hit", cx: 0, cy: 0, r: hitR }));
         node.appendChild(el("circle", { class: "halo", cx: 0, cy: 0, r: rr + 7, stroke: hex }));
 
         // The featured piece gets a thin ring that keeps expanding out and fading, so the
@@ -681,18 +938,24 @@ const monthYear = (ms: number) =>
       const x = sx(target[v.x.k] as number),
         y = sy(target[v.y.k] as number),
         rr = radius(target);
-      const right = x < W - M.r - 150,
+      const [rise, reach, lift, room] = L.arm;
+      const right = x < W - M.r - room,
         dx = right ? 1 : -1;
       const g = el("g", { class: "callout" });
       g.appendChild(
-        el("line", { x1: x + dx * (rr + 5), y1: y - 5, x2: x + dx * (rr + 24), y2: y - 42 }),
+        el("line", { x1: x + dx * (rr + 5), y1: y - 5, x2: x + dx * (rr + rise), y2: y - lift }),
       );
       g.appendChild(
-        el("line", { x1: x + dx * (rr + 24), y1: y - 42, x2: x + dx * (rr + 78), y2: y - 42 }),
+        el("line", {
+          x1: x + dx * (rr + rise),
+          y1: y - lift,
+          x2: x + dx * (rr + reach),
+          y2: y - lift,
+        }),
       );
       const tx = el("text", {
-        x: x + dx * (rr + 30),
-        y: y - 47,
+        x: x + dx * (rr + rise + 6),
+        y: y - lift - 5,
         "text-anchor": right ? "start" : "end",
       });
       tx.textContent = "Newest";
@@ -705,24 +968,36 @@ const monthYear = (ms: number) =>
       const v = views[view],
         d = deskOf.get(p.desk);
       const row = (dt: string, dd: string) =>
-        `<dt class="tracking-[0.06em] uppercase text-base-400">${dt}</dt><dd class="m-0 text-base-950 tabular-nums">${dd}</dd>`;
+        `<dt class="tracking-[0.06em] uppercase text-ink-muted">${dt}</dt><dd class="m-0 text-ink tabular-nums">${dd}</dd>`;
       card!.innerHTML =
-        `<div class="mb-2.5 flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] uppercase text-base-600">` +
+        `<div class="mb-2.5 flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] uppercase text-ink-muted">` +
         `<i class="block size-2 rounded-full" style="background:${hexOf(p.desk)}"></i>${d?.ink ?? ""} — ${d?.label ?? p.desk}</div>` +
-        `<h3 class="font-display m-0 mb-3 text-[19px] leading-tight font-semibold tracking-[-0.02em] text-balance">${p.title}</h3>` +
+        `<h3 class="font-display m-0 mb-3 text-[20px] leading-tight font-semibold tracking-[-0.02em] text-balance">${p.title}</h3>` +
         `<dl class="m-0 mb-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-[3px] font-mono text-[11px]">` +
         row(v.x.label, v.x.fmt(p[v.x.k] as number)) +
         row(v.y.label, v.y.fmt(p[v.y.k] as number)) +
         (v.x.k === "order" ? "" : row("Published", fmtDate(p.date))) +
         `</dl>` +
-        `<div class="-mx-4 flex justify-between border-t border-rule px-4 py-2.5 font-mono text-[10.5px] tracking-[0.14em] uppercase text-base-950"><span>Read the piece</span><span>&rarr;</span></div>`;
+        // On a mouse this footer is a label for a click that already works on the dot.
+        // On touch it is the link itself — the tap on the dot only opened the card.
+        (coarse
+          ? `<a href="/blog/${p.slug}/" class="-mx-4 flex justify-between border-t border-rule px-4 py-3 font-mono text-[10.5px] tracking-[0.14em] uppercase text-ink no-underline"><span>Read the piece</span><span>&rarr;</span></a>`
+          : `<div class="-mx-4 flex justify-between border-t border-rule px-4 py-2.5 font-mono text-[10.5px] tracking-[0.14em] uppercase text-ink"><span>Read the piece</span><span>&rarr;</span></div>`);
+
       const rect = svg!.getBoundingClientRect();
       const px = (x / W) * rect.width,
         py = (y / H) * rect.height;
-      card!.style.left = `${Math.min(Math.max(px - 150, 0), rect.width - 300)}px`;
-      card!.style.top = `${py > rect.height * 0.5 ? py - (card!.offsetHeight + 20) : py + 26}px`;
+      // Measure rather than assume 300: the card is min(300px, 100%), so on a narrow
+      // frame it is whatever the column allows and a hard-coded clamp would push it
+      // off the edge.
+      const cw = card!.offsetWidth,
+        ch = card!.offsetHeight;
+      card!.style.left = `${Math.min(Math.max(px - cw / 2, 0), Math.max(0, rect.width - cw))}px`;
+      card!.style.top = `${py > rect.height * 0.5 ? py - (ch + 20) : py + 26}px`;
       card!.classList.add("is-on");
     }
+
+    const list = root.querySelector<HTMLElement>("[data-list]");
 
     function applyFilter() {
       layers.pts.querySelectorAll(".pt").forEach((g: any) => {
@@ -731,6 +1006,26 @@ const monthYear = (ms: number) =>
         g.style.pointerEvents = on ? "auto" : "none";
       });
       if (layers.call) layers.call.style.opacity = !only || newest.desk === only ? "1" : "0.13";
+
+      /**
+       * The list is a second view of the same data, not decoration, so the desk filter
+       * has to move it too. It previously did not, which made the legend a control that
+       * visibly did nothing on any screen narrow enough to hide the plot.
+       *
+       * The list is removed from flow rather than dimmed: dimming is how the plot keeps
+       * a filtered point in context on a shared pair of axes, but a dimmed row in a
+       * vertical list is just an unreadable row taking up a thumb-scroll.
+       */
+      if (list) {
+        let shown = 0;
+        list.querySelectorAll<HTMLElement>("li[data-desk-row]").forEach((li) => {
+          const on = !only || li.dataset.deskRow === only;
+          li.hidden = !on;
+          if (on) shown++;
+        });
+        const empty = list.nextElementSibling as HTMLElement | null;
+        if (empty?.hasAttribute("data-list-empty")) empty.hidden = shown > 0;
+      }
     }
 
     /** Anything anchored to a point (the homepage connector) redraws on this. */
@@ -746,87 +1041,59 @@ const monthYear = (ms: number) =>
       announce();
     }
 
-    function retarget() {
-      const v = views[view],
-        pts = layers.pts;
-      pts.remove();
-      drawStatic();
-      fit();
-      svg!.appendChild(pts);
-      raise();
-      card!.classList.remove("is-on");
-      [...pts.children].forEach((node: any, i: number) => {
-        const p = node._p as Pt;
-        const missing = typeof p[v.x.k] !== "number" || typeof p[v.y.k] !== "number";
-        node.style.display = missing ? "none" : "";
-        if (missing) return;
-        const x = sx(p[v.x.k] as number),
-          y = sy(p[v.y.k] as number);
-        const rr = radius(p);
-        node.querySelector(".core")?.setAttribute("r", String(rr));
-        node.querySelector(".halo")?.setAttribute("r", String(rr + 7));
-        if (!reduce)
-          node.animate(
-            [
-              { transform: `translate(${node._x}px,${node._y}px)` },
-              { transform: `translate(${x}px,${y}px)` },
-            ],
-            {
-              duration: 640,
-              delay: i * 24,
-              easing: "cubic-bezier(.45,0,.15,1)",
-              fill: "backwards",
-            },
-          );
-        node.setAttribute("transform", `translate(${x},${y})`);
-        node._x = x;
-        node._y = y;
-      });
-      drawCallout();
-      applyFilter();
-      announce();
-    }
 
     // ------------------------------------------------------------------ controls
-    if (views.length > 1) {
-      picker!.classList.remove("hidden");
-      views.forEach((v, i) => {
-        const b = document.createElement("button");
-        b.type = "button";
-        b.dataset.view = String(i);
-        b.setAttribute("aria-pressed", i === 0 ? "true" : "false");
-        b.textContent = v.name;
-        b.className =
-          "cursor-pointer border-0 border-r border-base-950 px-3.5 py-2.5 font-mono text-[11px] tracking-[0.08em] uppercase text-base-600 transition-colors last:border-r-0 aria-pressed:bg-base-950 aria-pressed:text-paper focus-visible:outline-riso-sky focus-visible:outline-2 focus-visible:outline-offset-2";
-        b.onclick = () => {
-          if (i === view) return;
-          picker!
-            .querySelectorAll("button")
-            .forEach((o) => o.setAttribute("aria-pressed", "false"));
-          b.setAttribute("aria-pressed", "true");
-          view = i;
-          retarget();
-        };
-        picker!.appendChild(b);
-      });
-    }
-
     // Page-wide, not root-scoped: the homepage renders its desk index in the header,
     // outside this component. One scatter per page, so this stays unambiguous.
+    function setDesk(id: string | null) {
+      only = id;
+      document.querySelectorAll<HTMLButtonElement>("[data-desk]").forEach((o) => {
+        o.setAttribute("aria-pressed", String(only === o.dataset.desk));
+        o.classList.toggle("opacity-30", !!only && only !== o.dataset.desk);
+      });
+      card!.classList.remove("is-on");
+      fit();
+      raise();
+      applyFilter();
+    }
+
     document.querySelectorAll<HTMLButtonElement>("[data-desk]").forEach((b) => {
-      b.onclick = () => {
-        only = only === b.dataset.desk ? null : b.dataset.desk!;
-        document.querySelectorAll<HTMLButtonElement>("[data-desk]").forEach((o) => {
-          o.setAttribute("aria-pressed", String(only === o.dataset.desk));
-          o.classList.toggle("opacity-30", !!only && only !== o.dataset.desk);
-        });
-        fit();
-        raise();
-        applyFilter();
-      };
+      b.onclick = () => setDesk(only === b.dataset.desk ? null : b.dataset.desk!);
     });
+    root
+      .querySelector<HTMLButtonElement>("[data-clear-filter]")
+      ?.addEventListener("click", () => setDesk(null));
 
     build();
+
+    /**
+     * The layout was previously chosen once, at load. Rotating a phone, or dragging a
+     * desktop window across the md boundary, left the wrong frame in place.
+     *
+     * Only a change of LAYOUT rebuilds. Every other resize is free, because the viewBox
+     * already scales the drawing — rebuilding on each resize event would restart the
+     * entrance animation every frame of a window drag.
+     */
+    let pending = 0;
+    addEventListener("resize", () => {
+      clearTimeout(pending);
+      pending = window.setTimeout(() => {
+        if (layoutFor().name === L.name) return;
+        applyLayout();
+        card!.classList.remove("is-on");
+        build();
+        applyFilter();
+      }, 150);
+    });
+
+    if (coarse) {
+      // A tapped-open card needs a way back that is not "tap the 5px dot again".
+      document.addEventListener("click", (e) => {
+        if (!card!.contains(e.target as Node)) card!.classList.remove("is-on");
+      });
+      const verb = root.querySelector("[data-verb]");
+      if (verb) verb.textContent = "Tap a point to preview it.";
+    }
   }
 
   document
@@ -836,48 +1103,59 @@ const monthYear = (ms: number) =>
 
 <style>
   .scatter-index :global(.plot-bg) {
-    fill: var(--color-plot);
+    fill: var(--ground-plot);
   }
   .scatter-index :global(.ax-line) {
-    stroke: var(--color-base-950);
+    stroke: var(--ink);
     stroke-width: 1.25;
     fill: none;
   }
   .scatter-index :global(.tick) {
-    stroke: var(--color-rule);
+    stroke: var(--ground-rule);
     stroke-width: 1;
   }
   .scatter-index :global(.tick-label) {
     font-family: var(--font-mono);
     font-size: 10px;
-    fill: var(--color-base-400);
+    fill: var(--ink-muted);
     letter-spacing: 0.06em;
   }
   .scatter-index :global(.ax-label) {
     font-family: var(--font-mono);
     font-size: 11px;
-    fill: var(--color-base-950);
+    fill: var(--ink);
     letter-spacing: 0.13em;
     text-transform: uppercase;
     font-weight: 500;
   }
+  /* The fit defaults to the page's ink and is only overridden inline when a desk
+     filter pins it to that desk's colour. */
   .scatter-index :global(.fit-band) {
+    fill: var(--ink);
     opacity: 0.085;
   }
   .scatter-index :global(.fit-line) {
     fill: none;
+    stroke: var(--ink);
     stroke-width: 1.5;
     opacity: 0.6;
+  }
+  /* A fit the sample cannot yet support is dashed and lighter. The reader should be
+     able to tell the two apart without reading the note, but still see the slope. */
+  .scatter-index :global(.fit-line.is-provisional) {
+    stroke-dasharray: 5 4;
+    opacity: 0.45;
   }
   .scatter-index :global(.fit-label) {
     font-family: var(--font-mono);
     font-size: 10.5px;
     letter-spacing: 0.08em;
     font-weight: 500;
+    fill: var(--ink);
     opacity: 0.85;
   }
   .scatter-index :global(.callout line) {
-    stroke: var(--color-base-950);
+    stroke: var(--ink);
     stroke-width: 1;
   }
   .scatter-index :global(.callout text) {
@@ -885,7 +1163,7 @@ const monthYear = (ms: number) =>
     font-size: 10px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    fill: var(--color-base-950);
+    fill: var(--ink);
   }
   .scatter-index :global(.pt) {
     cursor: pointer;
@@ -896,26 +1174,125 @@ const monthYear = (ms: number) =>
     opacity: 0;
     transition: opacity 0.15s;
   }
-  .scatter-index :global(.pt:hover .halo),
-  .scatter-index :global(.pt:focus-visible .halo) {
+  .scatter-index :global(.pt:hover .halo) {
     opacity: 1;
   }
-  .scatter-index :global(.pt:focus) {
-    outline: none;
+  /**
+   * Progressive enhancement, and the reason md:hidden is not a Tailwind class on the
+   * list any more. The plot is inert markup until the script runs, so it stays hidden
+   * until the root is marked ready — which also means a no-JS visitor gets the list at
+   * every width instead of an empty box on desktop and a working list on a phone.
+   */
+  [data-plot] {
+    display: none;
   }
-  .scatter-index :global(.pt:focus-visible .core) {
-    stroke: var(--color-base-950);
-    stroke-width: 2;
+  .scatter-index[data-ready] [data-plot] {
+    display: block;
   }
+  /**
+   * Container, not viewport. The script picks portrait vs landscape from the section's
+   * own clientWidth, and if this rule keyed off the viewport instead the two would
+   * disagree the moment the component is dropped into a narrower column than the
+   * homepage's — a portrait plot with the list already hidden, or the reverse.
+   * One box, one signal.
+   */
+  .scatter-index {
+    container-type: inline-size;
+  }
+  /**
+   * Below the breakpoint the list sits under the plot: the plot is the argument, the
+   * list is how you actually pick something with a thumb.
+   *
+   * Above the breakpoint it is VISUALLY hidden but still in the document, the
+   * accessibility tree, and the tab order — it is not `display: none`.
+   *
+   * Why: marks inside the <svg> are not reachable by assistive technology in practice.
+   * Measured in Chrome — a <g role="link" tabindex="0"> with an aria-label does not
+   * appear in the accessibility tree, and neither does a real SVG <a href> with the
+   * parent's role="img" removed. Rather than ship a chart that is the only index on
+   * desktop and is invisible to a screen reader, the chart is treated as the picture it
+   * is and this list carries the semantics.
+   *
+   * It un-hides on :focus-within so a sighted keyboard user can see where they are
+   * instead of watching focus vanish into nothing.
+   */
+  /**
+   * The ink name is identity, not function. In a narrow column it pushed the legend to
+   * 215px — a quarter of a phone viewport — so it earns its space only where there is
+   * space. The desk label and count always show.
+   *
+   * A container query, not `max-md:`. Everything else in this component keys off the
+   * section's own width, and a viewport utility here would disagree with all of it the
+   * moment the component sits in a narrower column than the homepage's.
+   */
+  @container (max-width: 767px) {
+    .scatter-index [data-ink-name] {
+      display: none;
+    }
+  }
+
+  @container (min-width: 768px) {
+    .scatter-index[data-ready] [data-list],
+    .scatter-index[data-ready] [data-list-empty] {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
+    .scatter-index[data-ready] [data-list]:focus-within {
+      position: static;
+      width: auto;
+      height: auto;
+      margin: 0;
+      overflow: visible;
+      clip-path: none;
+      white-space: normal;
+    }
+  }
+
   [data-card].is-on {
     opacity: 1;
     transform: translateY(0);
   }
+  /* On a mouse the card is a passive preview and must never eat the pointer. On touch
+     there is no hover, so the card IS the confirm step and has to be tappable. */
+  [data-card] {
+    pointer-events: none;
+  }
+  @media (hover: none) {
+    [data-card].is-on {
+      pointer-events: auto;
+    }
+  }
+  /* Touch targets. The visible dot stays the size the encoding wants it; an invisible
+     circle around it carries the tap. */
+  .scatter-index :global(.hit) {
+    fill: transparent;
+    stroke: none;
+  }
+  /**
+   * Reduced motion, deliberately not a blanket kill.
+   *
+   * This used to force `animation-duration: 0.001ms !important` onto everything in the
+   * component. That is the pattern the accessibility guidance warns about: it destroys
+   * useful feedback along with the motion. It was also redundant — the script already
+   * checks `prefers-reduced-motion` and simply does not start the entrance stagger, the
+   * axis draw-on, the fit-line reveal or the featured pulse.
+   *
+   * What is left to handle here is the preview card, whose only motion is a small
+   * upward slide. The slide goes; the opacity change stays, because it is the signal
+   * that the card appeared at all and removing it leaves the reader with no feedback.
+   */
   @media (prefers-reduced-motion: reduce) {
-    .scatter-index *,
-    .scatter-index :global(*) {
-      animation-duration: 0.001ms !important;
-      transition-duration: 0.001ms !important;
+    [data-card],
+    [data-card].is-on {
+      transform: none;
+      transition: opacity 0.12s linear;
     }
   }
 </style>

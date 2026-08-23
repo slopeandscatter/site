@@ -38,12 +38,15 @@ const blogCollection = defineCollection({
       featured: z.boolean().optional(),
 
       /**
-       * Optional analysis metadata.
+       * Optional analysis metadata. CURRENTLY UNUSED.
        *
-       * None of this is required and nothing breaks when it is absent — the homepage
-       * scatter falls back to publication date against reading time, both of which are
-       * free. But each field below unlocks an extra axis pair on the homepage once
-       * enough pieces carry it, so tagging a few is worthwhile if you ever feel like it.
+       * These once drove extra axis pairs on the homepage. The scatter now commits to
+       * one fixed pair — publication order against sources cited — because nothing
+       * subject-specific generalises across desks: dollars at stake means something for
+       * a transit piece and nothing for one about how long a game takes.
+       *
+       * They are kept, not deleted, because they cost nothing while unset and describe
+       * real properties a piece might one day want to record. Nothing reads them today.
        */
       // order-of-magnitude dollars at stake, as log10. 9 = $1B.
       money: z.number().min(0).max(15).optional(),

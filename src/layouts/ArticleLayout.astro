@@ -1,0 +1,179 @@
+---
+/**
+ * * The article template.
+ *
+ * A fixed frame with a composable interior: the masthead and the contents are always
+ * first, the receipts are always last, and everything between is arranged by the piece.
+ *
+ * WHAT IS ACTUALLY ENFORCED: the masthead, the contents nav and the closing links are
+ * the layout's, so those cannot move. The <Answer> and <Receipts> blocks live in the
+ * MDX body, which means their POSITION is a convention the author follows rather than
+ * something this file guarantees — Astro cannot project a component out of <Content>
+ * into a named slot up here. If a piece ever puts its receipts in the middle, nothing
+ * stops it. That is the honest state; making it structural means moving the answer into
+ * frontmatter, which is deferred until a few real pieces show what shape it wants.
+ *
+ * Two arrival contexts drive the structure:
+ *
+ *   - Someone from a narrated reel already knows the answer and wants the tool. They
+ *     get "Play with the model" as a named destination in the contents rather than a
+ *     heading buried among ten others, so the tool is one action from the top.
+ *   - A student or someone in the industry wants the argument and the method. They get
+ *     a linear read at a proper measure, with the working in full at the foot.
+ *
+ * Prose is held to 68ch. Figures and models deliberately break that measure — that is
+ * what gives the driver room without costing the reader a sidebar.
+ */
+import { getDesk } from "@config/desks";
+import { countSources, readingTime } from "@js/blogUtils";
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { formatDate } from "@js/textUtils";
+import { type CollectionEntry, getEntries } from "astro:content";
+
+import BaseLayout from "./BaseLayout.astro";
+
+interface Props {
+  post: CollectionEntry<"blog">;
+  headings: import("astro").MarkdownHeading[];
+}
+
+const { post, headings } = Astro.props as Props;
+const { title, description, authors, pubDate, updatedDate, desk: deskId } = post.data;
+
+const currLocale = getLocaleFromUrl(Astro.url);
+const authorsData = await getEntries(authors);
+const desk = getDesk(deskId);
+const mins = readingTime(post.body);
+const sources = countSources(post.body);
+
+// Only h2s. A contents list that mirrors every sub-heading is an outline, not a way in.
+const sections = headings.filter((h) => h.depth === 2);
+
+/**
+ * The tool, promoted out of the list.
+ *
+ * Convention, not schema: a piece whose interactive section is headed "The model",
+ * "Your turn" or "Try it" gets a direct jump link. Deliberately a convention while the
+ * first few pieces are written — once we know what these sections are actually called,
+ * it can become a frontmatter field rather than a guess.
+ */
+const modelSection = sections.find((h) => /^(the model|your turn|try it)$/i.test(h.text.trim()));
+---
+
+<BaseLayout
+  type="blog"
+  title={title}
+  description={description}
+  authorsData={authorsData}
+  postFrontmatter={post.data}
+>
+  <article class="mx-auto w-full max-w-6xl px-6">
+    {/* ---------------------------------------------------------------- masthead */}
+    <header class="pt-10 md:pt-14">
+      <p class="text-ink-muted flex items-center gap-2.5 font-mono text-[11px] tracking-[0.14em] uppercase">
+        <span
+          class="block size-2 shrink-0 rounded-full"
+          style={`background:${desk?.hex ?? "var(--ink-muted)"}`}
+        />
+        {desk?.label ?? deskId}
+      </p>
+
+      <h1
+        class="font-display text-ink mt-4 max-w-[20ch] text-[2.6rem] leading-[1.04] font-semibold tracking-[-0.035em] text-pretty md:text-[4.2rem]"
+      >
+        {title}
+      </h1>
+
+      <p class="text-ink-muted mt-5 max-w-[68ch] text-[17px] leading-relaxed">{description}</p>
+
+      <p
+        class="text-ink-muted border-rule mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 border-t pt-4 font-mono text-[11px] tracking-[0.1em] uppercase"
+      >
+        {authorsData.length > 0 && <span class="text-ink">{authorsData.map((a) => a.data.name).join(", ")}</span>}
+        <time datetime={pubDate.toISOString()}>{formatDate(pubDate, currLocale)}</time>
+        <span>{mins} min read</span>
+        {sources > 0 && <span>{sources} sources</span>}
+        {
+          updatedDate && (
+            <span class="text-ink">Updated {formatDate(updatedDate, currLocale)}</span>
+          )
+        }
+      </p>
+    </header>
+
+    {/* ---------------------------------------------------------------- contents */}
+    {
+      sections.length > 1 && (
+        <nav aria-label="Sections in this piece" class="border-rule mt-8 border-t pt-5">
+          {modelSection && (
+            <a
+              href={`#${modelSection.slug}`}
+              class="text-ink hover:text-riso-sky focus-visible:outline-riso-sky mb-5 inline-block font-mono text-[13px] tracking-[0.1em] uppercase underline decoration-1 underline-offset-4 transition-colors focus-visible:outline-2 focus-visible:outline-offset-4"
+            >
+              Play with the model &darr;
+            </a>
+          )}
+          <ol class="m-0 grid list-none gap-x-8 gap-y-2 p-0 sm:grid-cols-2 lg:grid-cols-3">
+            {sections.map((h, i) => (
+              <li class="flex gap-3">
+                <span class="text-ink-muted font-mono text-[11px] tabular-nums">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <a
+                  href={`#${h.slug}`}
+                  class="text-ink-muted hover:text-ink focus-visible:outline-riso-sky text-[15px] no-underline transition-colors focus-visible:outline-2 focus-visible:outline-offset-4"
+                >
+                  {h.text}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      )
+    }
+
+    {/* ------------------------------------------------------- the composable middle */}
+    <div class="markdown-content article-body border-ink mt-8 border-t pt-8 text-[17px]">
+      <slot />
+    </div>
+
+    <nav class="border-rule mt-16 mb-24 flex flex-wrap gap-x-10 gap-y-3 border-t pt-6">
+      <a
+        href="/blog/"
+        class="text-ink hover:text-riso-sky focus-visible:outline-riso-sky font-mono text-[11px] tracking-[0.14em] uppercase no-underline transition-colors focus-visible:outline-2 focus-visible:outline-offset-4"
+        >Every question &rarr;</a
+      >
+      <a
+        href="/method/"
+        class="text-ink hover:text-riso-sky focus-visible:outline-riso-sky font-mono text-[11px] tracking-[0.14em] uppercase no-underline transition-colors focus-visible:outline-2 focus-visible:outline-offset-4"
+        >How we work &rarr;</a
+      >
+      <a
+        href="/contact/?subject=correction"
+        class="text-ink hover:text-riso-sky focus-visible:outline-riso-sky font-mono text-[11px] tracking-[0.14em] uppercase no-underline transition-colors focus-visible:outline-2 focus-visible:outline-offset-4"
+        >Tell us we got it wrong &rarr;</a
+      >
+    </nav>
+  </article>
+</BaseLayout>
+
+<style>
+  /**
+   * The measure, and the two things allowed to break it.
+   *
+   * Prose sits at 68ch. A figure or a model is set wider, centred on the same rail, so
+   * the page has rhythm without cards and the driver gets room for controls. This is
+   * the one place in the system where something deliberately exceeds the reading
+   * column, which is why it is expressed here rather than per-component.
+   */
+  .article-body :global(> *) {
+    max-width: 68ch;
+  }
+  .article-body :global(> figure),
+  .article-body :global(> .breakout) {
+    max-width: min(100%, 60rem);
+  }
+  .article-body :global(> .breakout-wide) {
+    max-width: 100%;
+  }
+</style>

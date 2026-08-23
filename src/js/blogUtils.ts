@@ -215,17 +215,34 @@ export function sortByValue(jsObj: object): [string, number][] {
 /**
  * * Reading time, derived from the raw MDX body at build time.
  *
- * This is the homepage scatter's y-axis. It is used because it costs the author
- * nothing — no frontmatter field to remember, no judgment call to make consistently.
- * Strips frontmatter, code fences, JSX/HTML tags, and markdown link URLs first, so a
- * piece with a large interactive component is not counted as a long read.
+ * Shown under a headline as "5 min read". Not used by the homepage scatter, which
+ * encodes length as point size and needs the unrounded `countWords` for that.
  *
  * @param body raw markdown/MDX source, i.e. `entry.body`
  * @param wpm words per minute; 200 is the usual figure for considered prose
  * @returns whole minutes, minimum 1
  */
 export function readingTime(body: string | undefined, wpm: number = 200): number {
-  if (!body) return 1;
+  return Math.max(1, Math.round(countWords(body) / wpm));
+}
+
+/**
+ * * Words of prose, derived from the raw MDX body at build time.
+ *
+ * The homepage scatter encodes this as point SIZE. Word count is used rather than
+ * reading time because reading time is rounded to whole minutes, which collapses a
+ * real range into three or four buckets — fine for "5 min read" under a headline,
+ * useless as a continuous visual encoding.
+ *
+ * Counts prose only: frontmatter, code fences, JSX/HTML tags and link URLs are stripped
+ * first, so a piece carrying a large interactive component is not measured as a long
+ * read. This is the same normalisation `readingTime` applies, because they are the same
+ * measurement at two resolutions.
+ *
+ * @param body raw markdown/MDX source, i.e. `entry.body`
+ */
+export function countWords(body: string | undefined): number {
+  if (!body) return 0;
   const prose = body
     .replace(/^---[\s\S]*?---/, "") // frontmatter
     .replace(/```[\s\S]*?```/g, "") // fenced code
@@ -233,20 +250,22 @@ export function readingTime(body: string | undefined, wpm: number = 200): number
     .replace(/<[^>]+>/g, " ") // JSX and HTML tags
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1") // keep link text, drop the URL
     .replace(/[#*_>~|-]/g, " ");
-  const words = prose.split(/\s+/).filter(Boolean).length;
-  return Math.max(1, Math.round(words / wpm));
+  return prose.split(/\s+/).filter(Boolean).length;
 }
 
 /**
  * * Sources cited, counted from the piece's own body at build time.
  *
- * This is the homepage scatter's y-axis. Reading time was there first and turned out to
- * be a poor encoding — it barely varies, so every piece landed on one flat line. How
- * many sources a piece rests on varies a great deal, needs no frontmatter field, and is
- * the thing this site claims to care about.
+ * This is the homepage scatter's y-axis, plotted against publication order. Reading
+ * time was there first and turned out to be a poor encoding — it barely varies, so
+ * every piece landed on one flat line. Sourcing varies a great deal, needs no
+ * frontmatter field, and is the thing this site claims to care about; plotted over
+ * time it answers "are we sourcing harder as we go?"
  *
  * Counts DISTINCT external URLs, so citing the same StatCan table four times counts
- * once. Internal links and anchors are not sources.
+ * once — but two different tables on the same host count twice, including when the
+ * only thing separating them is the query string. Internal links and anchors are not
+ * sources, and neither is anything inside a code fence.
  *
  * @param body raw markdown/MDX source, i.e. `entry.body`
  */
@@ -263,8 +282,21 @@ export function countSources(body: string | undefined): number {
   for (const re of patterns) {
     let m: RegExpExecArray | null;
     while ((m = re.exec(prose)) !== null) {
-      // normalise so http/https and a trailing slash don't double-count
-      urls.add(m[1].replace(/^https?:\/\//, "").replace(/[/#?].*$/, "") + new URL(m[1]).pathname);
+      // Normalise so http/https, a trailing slash, and a #fragment don't double-count.
+      //
+      // The QUERY STRING is deliberately kept. It used to be stripped along with the
+      // fragment, which silently collapsed every citation that identifies its document
+      // by parameter rather than by path — a StatCan table, a court docket, anything
+      // ending ?id= — into a single source. Seventeen distinct references counted as
+      // one. That is a real undercount on the number this site's front page now plots.
+      try {
+        const u = new URL(m[1]);
+        urls.add(
+          u.hostname.replace(/^www\./, "") + u.pathname.replace(/\/$/, "") + u.search,
+        );
+      } catch {
+        // an unparseable href is not a citation
+      }
     }
   }
   return urls.size;

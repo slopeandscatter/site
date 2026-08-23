@@ -10,6 +10,15 @@ categories:
   - method
 ---
 
+import Answer from "@components/article/Answer.astro";
+import Receipts from "@components/article/Receipts.astro";
+
+<Answer>
+  We publish the arithmetic, not just the answer. Every piece shows the question, the
+  model, something you can push on, and the full working &mdash; and says plainly where
+  it might be wrong.
+</Answer>
+
 Most numbers you read in a news story arrive fully formed. Someone did arithmetic
 somewhere, and you are handed the result and asked to trust it. That is usually fine.
 It is also the least interesting part of the work.
@@ -48,3 +57,19 @@ specifically — to point at a line and say _that assumption is wrong, and here 
 rather than only being able to distrust the conclusion in general.
 
 That is a higher bar than it sounds. It means publishing the parts that are shaky.
+
+<Receipts checked="22 August 2026">
+  <Fragment slot="sources">
+    This piece is a statement of method and cites nothing. Every piece that reports a
+    number will list its sources here, each with the date it was accessed.
+  </Fragment>
+  <Fragment slot="assumptions">
+    None. There is no model in this piece to make assumptions with.
+  </Fragment>
+  <Fragment slot="wrong">
+    The obvious risk is that this reads as a promise rather than a practice. Hold us to
+    it: if a piece ships without its working, that is a failure of this page, and
+    [corrections@slopeandscatter.com](mailto:corrections@slopeandscatter.com) is the
+    place to say so.
+  </Fragment>
+</Receipts>

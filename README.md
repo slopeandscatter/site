@@ -39,7 +39,9 @@ closest perceptual distance between any two is **ΔE 44**. Those two properties 
 stop one desk from shouting and another from vanishing. Swapping an ink for a prettier
 colour will quietly break both — re-check the numbers if you do.
 
-Grounds: paper `#F2F4F0`, plot `#F8F9F6`, rule `#C6CEC8`, page grid `#E0E5E0`, ink `#14181A`.
+Grounds: paper `#F2F4F0`, plot `#FCFDFA`, rule `#C6CEC8`, page grid `#ECEFEB`, ink `#14181A`.
+The plot ground is deliberately lighter than the page grid: the figure has to out-contrast
+the ground, or the decoration reads louder than the chart. See DESIGN.md.
 
 ### Type — three faces, three jobs
 

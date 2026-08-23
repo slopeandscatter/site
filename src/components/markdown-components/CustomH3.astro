@@ -14,7 +14,7 @@ const domain = Astro.url.origin + (await getLocalizedPathname(currLocale, Astro.
 <h3 id={id} {...rest} class="group flex flex-wrap items-center gap-2">
   <span><slot /></span>
   <button
-    class="tooltip-trigger not-content after:bg-base-900 after:text-base-100 after:border-border hover:text-foreground/70 hidden rounded-md font-sans text-sm opacity-0 transition-opacity group-hover:opacity-100 after:border md:inline"
+    class="tooltip-trigger not-content after:bg-base-900 after:text-base-100 after:border-border hover:text-foreground/70 hidden rounded-none font-sans text-sm opacity-0 transition-opacity group-hover:opacity-100 after:border md:inline"
     data-tooltip="Copy link"
     data-clipboard-text={domain + "#" + id}
   >
@@ -33,8 +33,10 @@ const domain = Astro.url.origin + (await getLocalizedPathname(currLocale, Astro.
     left: 50%;
     transform: translateX(-50%);
     padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
+    /* Square and on the Label step. The system has one radius (zero, outside data
+       marks) and this tooltip is not a data mark. */
+    border-radius: 0;
+    font-size: 0.6875rem;
     white-space: nowrap;
     opacity: 0;
     transition: opacity 0.2s;

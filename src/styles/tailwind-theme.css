@@ -25,10 +25,19 @@
   --color-riso-gold: #bb8b41; /* Flat Gold  — culture          2.89:1 */
 
   /* ------------------------------------------------------------------ grounds */
-  --color-paper: #f2f4f0; /* page */
-  --color-plot: #f8f9f6; /* inside a chart's plot area */
-  --color-rule: #c6cec8; /* hairlines, gridlines */
-  --color-graticule: #e0e5e0; /* the faint page grid */
+  /* The four grounds and the two inks are NOT declared here, because they are the one
+     part of the palette that has to flip between light and dark. They live as raw
+     custom properties in global.css (:root and .dark) and are re-exported as Tailwind
+     utilities in the `@theme inline` block at the foot of this file. The utility names
+     are unchanged — `bg-paper`, `bg-plot`, `border-rule` — they just resolve per theme.
+
+     Light values:  paper #F2F4F0  plot #F8F9F6  rule #C6CEC8  graticule #E0E5E0
+     Dark values:   paper #14181A  plot #1C2220  rule #414947  graticule #232A28
+
+     The riso inks above are deliberately NOT flipped. Measured against the dark plot
+     ground they hold the same 1.28x heaviest-to-lightest spread as they do on paper,
+     and every one of them lands above 4:1 there rather than around 3:1. The set that
+     was derived for paper is already the right set for the dark ground. */
 
   /* --------------------------------------------------------- primary (sky blue) */
   /* used for links and interactive affordances; ramp derived from --color-riso-sky */
@@ -117,6 +126,24 @@
 
 /* "inline" option is necessary here https://github.com/tailwindlabs/tailwindcss/discussions/15122#discussioncomment-11356322 */
 @theme inline {
+  /* ------------------------------------------------------- grounds and ink (themed) */
+  /* Backed by the custom properties global.css sets on :root and .dark. */
+  --color-paper: var(--ground-paper);
+  --color-plot: var(--ground-plot);
+  --color-rule: var(--ground-rule);
+  --color-graticule: var(--ground-graticule);
+
+  /* Two ink roles, not three.
+     On paper (#F2F4F0) the ramp runs out of legible greys fast: base-500 measures
+     3.59:1 and base-400 only 2.40:1, so neither can carry small text. A third,
+     fainter tier would have to be an accessibility failure to be visibly fainter.
+     Tiers are separated by face, size and tracking instead, which this design was
+     already doing. Both roles clear AA in both themes:
+       ink        16.14 light / 14.41 dark
+       ink-muted   5.60 light /  6.73 dark  */
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+
   /* starwind utilities setup */
   --color-background: var(--background);
   --color-foreground: var(--foreground);

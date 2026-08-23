@@ -1,11 +1,8 @@
 ---
-import Button from "@components/button/Button.astro";
 import FooterLink from "@components/footer/FooterLink.astro";
 import SiteLogo from "@components/site-logo/SiteLogo.astro";
-import SocialIconSimple from "@components/social/SocialIconSimple.astro";
 import { getLocaleFromUrl } from "@js/localeUtils";
 import { getTranslatedData } from "@js/translationUtils";
-import { type ComponentProps } from "astro/types";
 import { Icon } from "astro-icon/components";
 
 import { getLocalizedRoute } from "@/js/translationUtils";
@@ -23,21 +20,24 @@ interface FooterLinkItem {
 
 const quickLinks: FooterLinkItem[] = [
   { label: "Every question", href: "/blog/", newTab: false },
-  { label: "Desks", href: "/categories/", newTab: false },
+  { label: "Desks", href: "/desks/", newTab: false },
+  { label: "Method", href: "/method/", newTab: false },
   { label: "Contact", href: "/contact/", newTab: false },
 ];
 
-// TODO: add Method, Corrections and Data & code links once those pages exist.
-// Linking to them before they are built just ships 404s.
+// TODO: add Corrections and Data & code once those pages exist. Linking to a page
+// before it is built just ships a 404 — /method/ was on this list until it was written.
 const legalLinks: FooterLinkItem[] = [{ label: "Privacy", href: "/privacy-policy/" }];
 
-// TODO: point these at real accounts, or delete the ones that will not exist.
-const socialLinks: ComponentProps<typeof SocialIconSimple>[] = [];
+// Same source as the contact page. Rendered as text links rather than icon discs: a
+// circle in this system means one data point, so a row of circular glyphs would be
+// borrowing a meaning it does not have.
+const socialLinks = siteData.contact.socials;
 
 const contactInfo = [
   {
-    value: siteData.author.email,
-    href: `mailto:${siteData.author.email}`,
+    value: siteData.contact.email,
+    href: `mailto:${siteData.contact.email}`,
     icon: "tabler/mail",
   },
 ];
@@ -64,10 +64,23 @@ const contactInfo = [
           Curiosity-driven data journalism. A question, a model you can push on, and the working
           shown in full.
         </p>
-        <!-- Social Links -->
-        <div class="mt-5 flex flex-wrap gap-4">
-          {socialLinks.map((social) => <SocialIconSimple {...social} />)}
-        </div>
+        {
+          socialLinks.length > 0 && (
+            <ul class="mt-5 flex list-none flex-wrap gap-x-6 gap-y-2 p-0">
+              {socialLinks.map((social) => (
+                <li>
+                  <a
+                    href={social.url}
+                    rel="me noopener"
+                    class="text-base-400 hover:text-base-100 primary-focus font-mono text-[13px] no-underline transition-colors"
+                  >
+                    {social.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )
+        }
       </div>
       <div class="grid gap-x-4 gap-y-10 sm:grid-cols-2 md:w-1/2">
         <!-- Navigation -->

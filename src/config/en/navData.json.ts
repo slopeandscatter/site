@@ -15,9 +15,12 @@ const navConfig: navItem[] = [
   },
   {
     text: "Desks",
-    link: "/categories/",
+    link: "/desks/",
   },
-  // TODO: add "Method" once the methodology page exists
+  {
+    text: "Method",
+    link: "/method/",
+  },
   {
     text: "Contact",
     link: "/contact/",

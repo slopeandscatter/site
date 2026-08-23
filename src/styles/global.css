@@ -15,10 +15,37 @@
 /* other imports into specific layers */
 @import "./mos.css" layer(utilities);
 @import "./markdown-content.css" layer(components);
-@import "./buttons.css" layer(components);
 
 @layer base {
   :root {
+    /**
+     * * The themed half of the palette.
+     *
+     * Everything else in the design system is a fixed physical value — the five riso
+     * inks are real inks and do not change. These six do, because they are the paper
+     * and what is printed on it, and a dark ground is a different sheet.
+     *
+     * They are re-exported as Tailwind utilities (`bg-paper`, `text-ink`, ...) from the
+     * `@theme inline` block in tailwind-theme.css, so nothing needs a `dark:` variant to
+     * pick up the right value.
+     */
+    /**
+     * The plot must out-contrast the graticule. Previously it did not: the page grid
+     * separated itself from the paper at 1.153:1 while the plot separated itself at
+     * only 1.047:1, so the decoration had more figure/ground presence than the figure.
+     * Lifting the plot and softening the grid inverts it — see "The Figure Outranks
+     * The Ground Rule" in DESIGN.md. Measured after: figure 1.084, ground 1.048.
+     */
+    --ground-paper: #f2f4f0; /* page */
+    --ground-plot: #fcfdfa; /* inside a chart's plot area — one step above the page */
+    --ground-rule: #c6cec8; /* hairlines, gridlines */
+    --ground-graticule: #ecefeb; /* the faint page grid */
+    --ink: #14181a; /* 16.14:1 on paper */
+    --ink-muted: #5a6360; /* 5.60:1 on paper — the faintest grey that still passes AA */
+    /* the hover card's cast shadow. A dark offset on paper; on the dark sheet the same
+       shadow is invisible, so it inverts into a faint light cast instead of vanishing. */
+    --card-cast: rgb(20 24 26 / 0.09);
+
     /* starwind component variables  */
     --background: var(--color-base-100); /* paper #F2F4F0 */
     --foreground: var(--color-base-900);
@@ -68,6 +95,26 @@
   }
 
   .dark {
+    /**
+     * The dark sheet. The plot ground stays one step ABOVE the page, the same
+     * relationship it has on paper, so a chart still reads as something laid on the
+     * page rather than a hole cut in it.
+     *
+     * Measured: rule 1.75:1 on the plot ground (a hairline, present but quiet),
+     * ink 14.41:1, ink-muted 6.73:1.
+     *
+     * Dark needed no change to the plot to satisfy the figure-over-ground rule — only
+     * the graticule was too loud. Softening it alone inverts the relationship (figure
+     * 1.105, ground 1.048) and leaves every ink contrast on the plot untouched.
+     */
+    --ground-paper: #14181a;
+    --ground-plot: #1c2220;
+    --ground-rule: #414947;
+    --ground-graticule: #181d1c;
+    --ink: #e4e8e2;
+    --ink-muted: #98a19c;
+    --card-cast: rgb(0 0 0 / 0.45);
+
     /* starwind dark theme config */
     --background: var(--color-base-950);
     --foreground: var(--color-base-200);
@@ -156,8 +203,11 @@
   }
 
   /* focus utility class (for when user is tabbing through items on page) */
+  /* Square focus rings, offset off the element, matching the homepage's controls.
+     `rounded-xs` was rounding the ring on focus only — a radius that appears when you
+     tab and vanishes when you don't. */
   .primary-focus {
-    @apply focus-visible:outline-outline focus-visible:rounded-xs focus-visible:outline-2 focus-visible:transition-none;
+    @apply focus-visible:outline-riso-sky focus-visible:rounded-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:transition-none;
   }
 
   /* use with "animate-pause" to pause a CSS animation */
@@ -192,12 +242,10 @@
     background: radial-gradient(120% 90% at 50% 0%, transparent 40%, var(--color-paper) 100%);
   }
 
-  /* the grid is a paper texture; on a dark ground it just reads as noise */
-  .dark body,
-  html.dark body {
-    background-image: none;
-  }
-
+  /* The graticule is the identity, not decoration, so it survives into dark — it is
+     drawn from --ground-graticule and re-tints itself. What does NOT survive is the
+     radial wash: on paper it fades the grid out toward the foot of the page, but a
+     light-to-dark wash over a dark ground just looks like a rendering artefact. */
   .dark body::before,
   html.dark body::before {
     background: none;

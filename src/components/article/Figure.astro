@@ -1,0 +1,54 @@
+---
+/**
+ * * A figure.
+ *
+ * The load-bearing block of the template, because it is also the thing that leaves the
+ * site: the image you export from a chart is the same image that goes in a post, and
+ * the one flagged `share` becomes the piece's social card.
+ *
+ * So it is deliberately dumb. It takes an image you made elsewhere and frames it —
+ * correct proportions, caption, source line, desk-neutral ground. The site does not
+ * generate charts and does not try to; matching the house style is the chart's job,
+ * and DESIGN.md carries the spec for that.
+ *
+ * Breaks the 68ch prose measure by default. Pass `wide` for the full column, which is
+ * what a model or a wide time series usually wants.
+ */
+import { Image } from "astro:assets";
+
+interface Props {
+  src: ImageMetadata;
+  /** what the image shows, for someone who cannot see it. Not the caption. */
+  alt: string;
+  /** shown under the figure, in body type. The sentence the figure is making. */
+  caption?: string;
+  /** where the numbers came from. Mono, quieter than the caption. */
+  source?: string;
+  /** full column rather than the default figure width */
+  wide?: boolean;
+  /**
+   * Marks this as the piece's social card. Exactly one figure per piece should set it.
+   * Nothing enforces that yet — when a second piece needs it, it becomes frontmatter.
+   */
+  share?: boolean;
+}
+
+const { src, alt, caption, source, wide = false } = Astro.props as Props;
+---
+
+<figure class:list={["my-10", wide && "breakout-wide"]}>
+  <div class="border-rule bg-plot border">
+    <Image src={src} alt={alt} class="block h-auto w-full" />
+  </div>
+
+  {
+    (caption || source) && (
+      <figcaption class="mt-3 max-w-[68ch]">
+        {caption && <p class="text-ink m-0 text-[15px] leading-relaxed">{caption}</p>}
+        {source && (
+          <p class="text-ink-muted m-0 mt-1.5 font-mono text-[13px] leading-relaxed">{source}</p>
+        )}
+      </figcaption>
+    )
+  }
+</figure>

@@ -1,5 +1,4 @@
 ---
-import Button from "@components/button/Button.astro";
 import LanguageSelect from "@components/language-select/MobileLanguageSelect.astro";
 import MobileNavDropdown from "@components/nav/MobileNav/MobileNavDropdown.astro";
 import NavLink from "@components/nav/NavLink.astro";
@@ -23,7 +22,7 @@ import { locales } from "@config/siteSettings.json";
     data-open-modal
     id="mobile-nav__open-btn"
     disabled
-    class="primary-focus nav__link--base relative my-auto flex h-10 w-10 items-center justify-center rounded-md"
+    class="primary-focus nav__link--base relative my-auto flex h-10 w-10 items-center justify-center rounded-none"
   >
     <!-- hamburger icon to open menu -->
     <Icon
@@ -51,7 +50,7 @@ import { locales } from "@config/siteSettings.json";
         <button
           data-close-modal
           id="mobile-nav__close-btn"
-          class="primary-focus relative my-auto inline-flex h-10 w-10 items-center justify-center rounded-md"
+          class="primary-focus relative my-auto inline-flex h-10 w-10 items-center justify-center rounded-none"
         >
           <!-- "X" icon to close menu -->
           <Icon
@@ -102,7 +101,7 @@ import { locales } from "@config/siteSettings.json";
         <!-- don't forget to also update the button in Nav.astro! -->
         <a
           href="/#newsletter"
-          class="border-base-950 text-base-950 hover:bg-base-950 hover:text-paper primary-focus block w-full border px-3 py-2 text-center font-mono text-xs tracking-[0.1em] uppercase transition-colors"
+          class="border-ink text-ink hover:bg-ink hover:text-paper primary-focus block w-full border px-3 py-2 text-center font-mono text-xs tracking-[0.1em] uppercase transition-colors"
           >Subscribe</a
         >
       </div>

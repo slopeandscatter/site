@@ -1,0 +1,66 @@
+---
+/**
+ * 404.
+ *
+ * Was a full Voyager page: an animated starfield, a floating astronaut PNG, gradient
+ * text on the numerals, a pill button, a hardcoded `dark` wrapper, and "Houston, we
+ * have a problem!". Five separate things the design system forbids, on the one page a
+ * reader only ever reaches when something has already gone wrong.
+ *
+ * A 404 on this site should do what every other page does: say the true thing plainly
+ * and point at the index.
+ */
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { getLocalizedRoute } from "@js/translationUtils";
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+const currLocale = getLocaleFromUrl(Astro.url);
+---
+
+<BaseLayout title="Not found" description="That address isn't in the index." noindex={true}>
+  <div class="mx-auto w-full max-w-6xl px-6">
+    <section class="pt-10 pb-8 md:pt-14">
+      <p class="text-ink-muted m-0 font-mono text-xs font-medium tracking-[0.14em] uppercase">
+        404
+      </p>
+      <h1
+        class="font-display text-ink mt-4 text-[2.6rem] leading-[1.04] font-semibold tracking-[-0.035em] text-pretty md:text-[4.2rem]"
+      >
+        No such page.
+      </h1>
+      <p class="text-ink-muted mt-5 max-w-[68ch] text-[17px] leading-relaxed">
+        That address isn&rsquo;t in the index. It may have moved, or it may never have existed
+        &mdash; from here we can&rsquo;t tell which.
+      </p>
+    </section>
+
+    <section class="border-ink mt-4 mb-24 border-t pt-8">
+      <ul class="flex list-none flex-wrap gap-x-10 gap-y-4 p-0">
+        <li>
+          <a
+            href={getLocalizedRoute(currLocale, "/")}
+            class="text-ink hover:text-riso-sky focus-visible:outline-riso-sky font-mono text-[11px] tracking-[0.14em] uppercase no-underline transition-colors focus-visible:outline-2 focus-visible:outline-offset-4"
+          >
+            The plot &rarr;
+          </a>
+        </li>
+        <li>
+          <a
+            href={getLocalizedRoute(currLocale, "/blog/")}
+            class="text-ink hover:text-riso-sky focus-visible:outline-riso-sky font-mono text-[11px] tracking-[0.14em] uppercase no-underline transition-colors focus-visible:outline-2 focus-visible:outline-offset-4"
+          >
+            Every question &rarr;
+          </a>
+        </li>
+        <li>
+          <a
+            href={getLocalizedRoute(currLocale, "/contact/")}
+            class="text-ink hover:text-riso-sky focus-visible:outline-riso-sky font-mono text-[11px] tracking-[0.14em] uppercase no-underline transition-colors focus-visible:outline-2 focus-visible:outline-offset-4"
+          >
+            Tell us what broke &rarr;
+          </a>
+        </li>
+      </ul>
+    </section>
+  </div>
+</BaseLayout>

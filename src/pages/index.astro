@@ -1,0 +1,217 @@
+---
+/**
+ * Homepage — the index is a scatter plot.
+ *
+ * Points are positioned by publication date against reading time, both derived, so
+ * publishing a piece costs no extra bookkeeping. Filling in the optional analysis
+ * fields on a few pieces makes further axis pairs appear on their own; see
+ * `src/content.config.ts` and `src/components/scatter/ScatterIndex.astro`.
+ */
+import ScatterIndex, { type ScatterPoint } from "@components/scatter/ScatterIndex.astro";
+import { desks, getDesk } from "@config/desks";
+import { defaultLocale } from "@config/siteSettings.json";
+import { countSources, countWords, getAllPosts, readingTime } from "@js/blogUtils";
+import { getTranslatedData } from "@js/translationUtils";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { Image } from "astro:assets";
+
+// same helper the /blog/[...slug] route uses, so post.id here is the same slug it
+// generates — locale prefix already stripped
+const posts = await getAllPosts(defaultLocale);
+
+// same accessor the footer uses, so the contact address stays in one place and the
+// single-locale i18n plumbing keeps working if a second locale is ever added
+const siteData = getTranslatedData("siteData", defaultLocale);
+
+const points: ScatterPoint[] = posts.map((post) => ({
+  slug: post.id,
+  title: post.data.title,
+  desk: post.data.desk,
+  date: post.data.pubDate.getTime(),
+  mins: readingTime(post.body),
+  words: countWords(post.body),
+  sources: countSources(post.body),
+}));
+
+// The featured piece: an explicit `featured: true` wins, newest breaks ties, and with
+// nothing flagged the newest piece is featured anyway — so the box is never empty.
+const byNewest = [...posts].sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+const featured = byNewest.find((p) => p.data.featured) ?? byNewest[0];
+const featuredDesk = featured ? getDesk(featured.data.desk) : undefined;
+const featuredMins = featured ? readingTime(featured.body) : 0;
+
+// The desk index that fills the header: the taxonomy, introduced before the chart that
+// uses it, with real counts rather than decoration.
+const deskCounts = desks.map((desk) => ({
+  ...desk,
+  count: posts.filter((p) => p.data.desk === desk.id).length,
+}));
+---
+
+<BaseLayout
+  title="Slope & Scatter"
+  description="Someone should measure that. Infrastructure, rent, games, sport, film — every piece ships the model behind the answer, and every assumption it rests on."
+>
+  <div class="mx-auto w-full max-w-6xl px-6">
+    <div class="relative">
+      <div class="relative z-10 pt-10 pb-8 md:pt-14 md:pb-0">
+        <section>
+          <h1
+            class="font-display text-ink text-[2.6rem] leading-[1.04] font-semibold tracking-[-0.035em] text-pretty md:text-[4.2rem]"
+          >
+            Someone should measure that.
+          </h1>
+
+          <p class="text-ink-muted mt-5 max-w-[78ch] text-lg text-pretty">
+            Infrastructure, rent, games, sport, film — anything with a number hiding in it. Every
+            piece ships the model behind the answer, and every assumption it rests on.
+          </p>
+        </section>
+      </div>
+
+      <ScatterIndex points={points} featuredSlug={featured?.id} />
+    </div>
+
+    {
+      /* The featured piece gets its own room rather than a card floating over the chart:
+        the plot is the page's argument, and anything sitting on top of it competes.
+
+        No "Start here" label: the plot already tags this piece "Newest" and rings it,
+        so a second signpost both repeats that and invites skipping the chart the whole
+        page is built around. The desk ink moved onto the meta line, where it still
+        encodes the desk without needing a label above the heading. */
+    }
+    {
+      featured && (
+        <section class="border-ink mt-16 border-t pt-8">
+          <a
+            href={`/blog/${featured.id}/`}
+            class="group focus-visible:outline-riso-sky block no-underline focus-visible:outline-2 focus-visible:outline-offset-4"
+          >
+            <div>
+              <div class="max-w-[46ch]">
+                <h2 class="font-display text-ink group-hover:text-riso-sky m-0 text-3xl leading-[1.08] font-semibold tracking-[-0.028em] text-balance transition-colors md:text-[2.6rem]">
+                  {featured.data.title}
+                </h2>
+                <p class="text-ink-muted mt-4 text-[17px] leading-relaxed">
+                  {featured.data.description}
+                </p>
+                <p class="text-ink mt-6 flex items-center gap-5 font-mono text-[11px] tracking-[0.14em] uppercase">
+                  <span>Read the piece &rarr;</span>
+                  <span class="text-ink-muted flex items-center gap-2">
+                    <span
+                      class="block size-2 shrink-0 rounded-full"
+                      style={`background:${featuredDesk?.hex ?? "var(--ink-muted)"}`}
+                    />
+                    {featuredDesk?.label ?? featured.data.desk} &middot; {featuredMins} min
+                  </span>
+                </p>
+              </div>
+            </div>
+          </a>
+        </section>
+      )
+    }
+
+    <section class="border-ink mt-20 border-t pt-8">
+      <h2 class="text-ink-muted m-0 font-mono text-xs font-medium tracking-[0.14em] uppercase">
+        How a piece is built
+      </h2>
+      {/*
+        Running prose, not a four-up grid.
+
+        The four beats are a real sequence and the copy is worth keeping, but as equal
+        columns of label + heading + paragraph they were the most template-shaped thing
+        on the page — and with /method/ now covering all four properly, the homepage was
+        also saying it twice. As a paragraph it reads as a statement of practice, the
+        sequence still reads as a sequence, and the detail lives one click away.
+
+        Emphasis is weight, never colour: colour on this site encodes a desk.
+      */}
+      <p class="text-ink mt-6 max-w-[68ch] text-[17px] leading-relaxed">
+        Every piece starts as <strong class="font-semibold">a question</strong> you'd argue about
+        at a bar, phrased tightly enough to have a number as an answer. Then{" "}
+        <strong class="font-semibold">a model</strong> &mdash; real unit costs, real rates, stated
+        assumptions; where the data runs out we say so and estimate. Then{" "}
+        <strong class="font-semibold">your turn</strong>: the model ships as a thing you can drive,
+        so change the route, the wage, the scope, and the answer follows. Then{" "}
+        <strong class="font-semibold">the receipts</strong> &mdash; every source, every fudge
+        factor, every place we could be wrong, at the bottom, in full.
+      </p>
+
+      <a
+        href="/method/"
+        class="text-ink hover:text-riso-sky focus-visible:outline-riso-sky mt-6 inline-block font-mono text-[11px] tracking-[0.14em] uppercase no-underline transition-colors focus-visible:outline-2 focus-visible:outline-offset-4"
+      >
+        How we work &rarr;
+      </a>
+    </section>
+
+    {
+      /**
+       * The nav's Subscribe button points here, so this section must exist.
+       *
+       * No provider is wired yet. The form is therefore DISABLED rather than merely
+       * unwired: an enabled field with no `action` submits a GET to this page, which
+       * loses the address, puts it in the URL, and looks to the reader exactly like a
+       * successful signup. On a publication that sells itself on stating assumptions,
+       * a control that silently fails is the worst available option.
+       *
+       * The state names itself and offers the one route that does work. To go live:
+       * remove `disabled` from both controls, delete the `data-unwired` note, and give
+       * the form an `action` and `method`.
+       */
+    }
+    <section id="newsletter" class="border-rule mt-16 mb-24 border-t pt-8">
+      <div class="grid gap-8 md:grid-cols-[1fr_auto] md:items-end">
+        <div class="max-w-[44ch]">
+          <h2
+            class="font-display text-ink text-2xl leading-tight font-semibold tracking-[-0.025em] text-balance md:text-3xl"
+          >
+            New piece, the model behind it, and what we got wrong last time.
+          </h2>
+          <p class="text-ink-muted mt-3 text-[17px] leading-relaxed">
+            No more than one email per piece. Corrections included, not buried.
+          </p>
+        </div>
+
+        <div class="w-full md:w-auto">
+          <form class="flex w-full max-w-md flex-wrap items-stretch gap-0 md:w-auto">
+            <label class="sr-only" for="newsletter-email">Email address</label>
+            <input
+              id="newsletter-email"
+              type="email"
+              name="email"
+              autocomplete="email"
+              placeholder="you@example.com"
+              disabled
+              aria-describedby="newsletter-state"
+              class="border-rule bg-paper text-ink-muted placeholder:text-ink-muted min-w-0 flex-1 cursor-not-allowed border px-3.5 py-2.5 font-mono text-[13px] md:w-64 md:flex-none"
+            />
+            <button
+              type="submit"
+              disabled
+              aria-describedby="newsletter-state"
+              class="border-rule bg-paper text-ink-muted cursor-not-allowed border border-l-0 px-5 py-2.5 font-mono text-[11px] tracking-[0.12em] uppercase"
+            >
+              Subscribe
+            </button>
+          </form>
+
+          <p
+            id="newsletter-state"
+            data-unwired
+            class="text-ink-muted mt-3 max-w-md font-mono text-[11.5px] leading-relaxed tracking-[0.04em]"
+          >
+            <span class="text-ink">Not open yet.</span>{" "}
+            <a
+              href={`mailto:${siteData.contact.email}?subject=Slope%20%26%20Scatter%20list`}
+              class="text-ink decoration-rule hover:decoration-riso-sky underline underline-offset-4"
+              >Email us</a
+            > and we'll add you the day it is.
+          </p>
+        </div>
+      </div>
+    </section>
+  </div>
+</BaseLayout>

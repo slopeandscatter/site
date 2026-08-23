@@ -1,0 +1,56 @@
+# build output
+dist/
+
+# generated types
+.astro/
+
+# pagefind search for dev purposes
+public/pagefind/
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# environment variables
+.env
+.env.production
+
+# macOS-specific files
+.DS_Store
+
+# Local hosting provider folders
+.netlify
+.vercel
+.wrangler
+
+# JetBrains IDE
+.idea/
+
+# design canvas: the seeded payload is generated from the .dc.html sources +
+# canvas.json by the design skill's helper — 2 MB of editor code, not source
+design/*.html
+!design/*.dc.html
+
+# ---------------------------------------------------------------- agent tooling
+# Vendored AI-agent skills and per-machine tool settings. .claude, .gemini and
+# .agents each hold their own copy of the same skill bundle — about 10 MB between
+# them — and none of it is this project's source.
+#
+# .claude/settings.json is deliberately NOT ignored: if project-wide agent settings
+# are ever added they should be shared. settings.local.json stays personal.
+.claude/*
+!.claude/settings.json
+.codex/
+.gemini/
+.agents/
+
+# Impeccable design system: the config splits by audience.
+#   config.json       project decisions (detector exemptions) — COMMITTED
+#   design.json       machine-readable half of DESIGN.md      — COMMITTED
+#   config.local.json per-machine state (hook consent)        — ignored
+.impeccable/config.local.json

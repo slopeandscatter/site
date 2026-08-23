@@ -1,0 +1,259 @@
+@import url("./fonts.css");
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* tailwind plugins */
+@plugin "@tailwindcss/forms";
+
+/* dark mode */
+@variant dark (&:where(.dark, .dark *));
+
+/* theme definition import */
+@import "./tailwind-theme.css";
+
+/* other imports into specific layers */
+@import "./mos.css" layer(utilities);
+@import "./markdown-content.css" layer(components);
+
+@layer base {
+  :root {
+    /**
+     * * The themed half of the palette.
+     *
+     * Everything else in the design system is a fixed physical value — the five riso
+     * inks are real inks and do not change. These six do, because they are the paper
+     * and what is printed on it, and a dark ground is a different sheet.
+     *
+     * They are re-exported as Tailwind utilities (`bg-paper`, `text-ink`, ...) from the
+     * `@theme inline` block in tailwind-theme.css, so nothing needs a `dark:` variant to
+     * pick up the right value.
+     */
+    /**
+     * The plot must out-contrast the graticule. Previously it did not: the page grid
+     * separated itself from the paper at 1.153:1 while the plot separated itself at
+     * only 1.047:1, so the decoration had more figure/ground presence than the figure.
+     * Lifting the plot and softening the grid inverts it — see "The Figure Outranks
+     * The Ground Rule" in DESIGN.md. Measured after: figure 1.084, ground 1.048.
+     */
+    --ground-paper: #f2f4f0; /* page */
+    --ground-plot: #fcfdfa; /* inside a chart's plot area — one step above the page */
+    --ground-rule: #c6cec8; /* hairlines, gridlines */
+    --ground-graticule: #ecefeb; /* the faint page grid */
+    --ink: #14181a; /* 16.14:1 on paper */
+    --ink-muted: #5a6360; /* 5.60:1 on paper — the faintest grey that still passes AA */
+    /* the hover card's cast shadow. A dark offset on paper; on the dark sheet the same
+       shadow is invisible, so it inverts into a faint light cast instead of vanishing. */
+    --card-cast: rgb(20 24 26 / 0.09);
+
+    /* starwind component variables  */
+    --background: var(--color-base-100); /* paper #F2F4F0 */
+    --foreground: var(--color-base-900);
+    --card: var(--color-base-50); /* plot ground #F8F9F6 — cards sit slightly above paper */
+    --card-foreground: var(--color-base-950);
+    --popover: var(--color-base-50);
+    --popover-foreground: var(--color-base-950);
+    --primary: var(--color-primary-700);
+    --primary-dark: var(--color-primary-800);
+    --primary-foreground: var(--color-base-50);
+    --secondary: var(--color-riso-scarlet);
+    --secondary-foreground: var(--color-base-50);
+    --muted: var(--color-base-100);
+    --muted-foreground: var(--color-base-600);
+    --accent: var(--color-base-200);
+    --accent-foreground: var(--color-base-900);
+    --info: var(--color-sky-300);
+    --info-foreground: var(--color-sky-950);
+    --success: var(--color-green-300);
+    --success-foreground: var(--color-green-950);
+    --warning: var(--color-amber-300);
+    --warning-foreground: var(--color-amber-950);
+    --error: var(--color-red-700);
+    --error-foreground: var(--color-base-50);
+    --border: var(--color-base-300); /* rule #C6CEC8 */
+    --input: var(--color-base-300);
+    --outline: var(--primary);
+
+    --radius: 0.5rem;
+
+    /* custom shiki styling for markdown code blocks. These are the variables Astro uses
+		Shiki Themes: https://shiki.style/themes   https://shiki.matsu.io/guide/theme-colors#css-variables-theme */
+    --astro-code-foreground: var(--color-base-50);
+    --astro-code-background: #202022;
+    --astro-code-token-constant: #a5b4fc; /* recommend making this a slightly off color from your primary-300 color */
+    --astro-code-token-string: var(--color-primary-700);
+    --astro-code-token-comment: var(--color-base-400);
+    --astro-code-token-keyword: var(--color-base-300);
+    --astro-code-token-parameter: var(--color-sky-400);
+    --astro-code-token-function: var(--color-base-50);
+    --astro-code-token-string-expression: var(--color-primary-300);
+    --astro-code-token-punctuation: var(--color-base-200);
+    --astro-code-token-link: var(--color-base-100);
+
+    /* default font */
+    font-family: var(--font-sans);
+  }
+
+  .dark {
+    /**
+     * The dark sheet. The plot ground stays one step ABOVE the page, the same
+     * relationship it has on paper, so a chart still reads as something laid on the
+     * page rather than a hole cut in it.
+     *
+     * Measured: rule 1.75:1 on the plot ground (a hairline, present but quiet),
+     * ink 14.41:1, ink-muted 6.73:1.
+     *
+     * Dark needed no change to the plot to satisfy the figure-over-ground rule — only
+     * the graticule was too loud. Softening it alone inverts the relationship (figure
+     * 1.105, ground 1.048) and leaves every ink contrast on the plot untouched.
+     */
+    --ground-paper: #14181a;
+    --ground-plot: #1c2220;
+    --ground-rule: #414947;
+    --ground-graticule: #181d1c;
+    --ink: #e4e8e2;
+    --ink-muted: #98a19c;
+    --card-cast: rgb(0 0 0 / 0.45);
+
+    /* starwind dark theme config */
+    --background: var(--color-base-950);
+    --foreground: var(--color-base-200);
+    --card: oklch(1% 0 0);
+    --card-foreground: var(--color-base-100);
+    --popover: oklch(1% 0 0);
+    --popover-foreground: var(--color-base-100);
+    --primary: var(--color-primary-700);
+    --primary-dark: var(--color-primary-800);
+    --primary-foreground: var(--color-base-50);
+    --secondary: var(--color-fuchsia-300);
+    --secondary-foreground: oklch(1% 0 0);
+    --muted: var(--color-base-900);
+    --muted-foreground: var(--color-base-400);
+    --accent: var(--color-base-900);
+    --accent-foreground: var(--color-base-100);
+    --info: var(--color-sky-300);
+    --info-foreground: var(--color-sky-950);
+    --success: var(--color-green-300);
+    --success-foreground: var(--color-green-950);
+    --warning: var(--color-amber-300);
+    --warning-foreground: var(--color-amber-950);
+    --error: var(--color-red-800);
+    --error-foreground: oklch(99% 0 0);
+    --border: var(--color-base-800);
+    --input: var(--color-base-800);
+    --outline: var(--primary);
+
+    @apply scheme-dark;
+  }
+
+  /* starwind preflight merged with Cosmic Themes */
+  * {
+    @apply border-border;
+  }
+  /* *:focus-visible {
+    @apply outline-outline !transition-none;
+  } */
+  html {
+    @apply bg-background text-foreground leading-[1.6rem] scheme-light dark:scheme-dark;
+    scroll-behavior: smooth;
+    -moz-text-size-adjust: none;
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
+    /* prevent layout shift */
+    scrollbar-gutter: stable;
+  }
+  button {
+    @apply cursor-pointer;
+  }
+}
+
+@layer components {
+  .h1 {
+    @apply font-heading text-4xl md:text-5xl;
+  }
+
+  .h2 {
+    @apply font-heading text-4xl;
+  }
+
+  .h3 {
+    @apply font-heading text-2xl;
+  }
+
+  .description {
+    @apply text-base-700 dark:text-base-400 md:text-lg;
+  }
+
+  /* styles various navbar elements like links, language switcher, dropdowns, theme toggle, etc. */
+  .nav__link--base {
+    @apply text-base-600 hover:text-base-950 dark:text-base-400 dark:hover:text-base-100 font-mono text-xs leading-tight tracking-[0.1em] uppercase transition-colors;
+  }
+
+  /* matches the max-w-6xl px-6 column the pages use, so the wordmark lines up with
+     the headline instead of sitting 100px to its left */
+  .site-container {
+    @apply mx-auto max-w-6xl px-6;
+  }
+}
+
+@layer utilities {
+  /* used with select field */
+  .sr-only {
+    @apply sr-only;
+  }
+
+  /* focus utility class (for when user is tabbing through items on page) */
+  /* Square focus rings, offset off the element, matching the homepage's controls.
+     `rounded-xs` was rounding the ring on focus only — a radius that appears when you
+     tab and vanishes when you don't. */
+  .primary-focus {
+    @apply focus-visible:outline-riso-sky focus-visible:rounded-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:transition-none;
+  }
+
+  /* use with "animate-pause" to pause a CSS animation */
+  .pause {
+    animation-play-state: paused !important;
+  }
+}
+
+@layer base {
+  /**
+   * Plotting paper. A faint 120px graticule under the whole page, with a radial wash
+   * that lets it fade out toward the edges so it never competes with the chart's own
+   * gridlines. This is the ground the riso inks were chosen against.
+   */
+  body {
+    background-image:
+      linear-gradient(var(--color-graticule) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-graticule) 1px, transparent 1px);
+    background-size: 120px 120px;
+    background-position: -1px -1px;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    /* Behind content, above the body's own background. At z-index 0 this fixed layer
+       painted OVER every section that wasn't itself in a stacking context, washing them
+       out toward the foot of the viewport. */
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(120% 90% at 50% 0%, transparent 40%, var(--color-paper) 100%);
+  }
+
+  /* The graticule is the identity, not decoration, so it survives into dark — it is
+     drawn from --ground-graticule and re-tints itself. What does NOT survive is the
+     radial wash: on paper it fades the grid out toward the foot of the page, but a
+     light-to-dark wash over a dark ground just looks like a rendering artefact. */
+  .dark body::before,
+  html.dark body::before {
+    background: none;
+  }
+
+  @media (max-width: 767px) {
+    body {
+      background-size: 80px 80px;
+    }
+  }
+}

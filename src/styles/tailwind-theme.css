@@ -1,0 +1,182 @@
+/**
+ * * Slope & Scatter — Tailwind theme settings
+ *
+ * Kept in a separate file so it can be imported into <style> tags in .astro components.
+ *
+ * Two things carry the identity and neither should be edited casually:
+ *
+ *   1. The riso ink set. Five real Risograph inks, one per desk. They double as the
+ *      categorical chart palette, so "Games" is #00A95C everywhere — in the nav, on a
+ *      tag, and as a dot in a scatter. Chosen so that against the plot ground the
+ *      heaviest-to-lightest contrast spread is 1.28x and the closest perceptual
+ *      distance between any two is deltaE 44. Swapping one for a prettier colour will
+ *      quietly break both properties.
+ *
+ *   2. Three faces, three jobs: Familjen Grotesk display, Literata body,
+ *      IBM Plex Mono for anything that is data (axis labels, figures, methodology).
+ */
+@theme {
+  /* ---------------------------------------------------------------- riso inks */
+  /* one per desk — also the categorical chart palette */
+  --color-riso-sky: #0090ce; /* Sky Blue   — infrastructure   3.38:1 */
+  --color-riso-scarlet: #f65058; /* Scarlet    — cost of living   3.20:1 */
+  --color-riso-green: #00a95c; /* Green      — games            2.91:1 */
+  --color-riso-violet: #9f6db9; /* Violet     — sport            3.71:1 */
+  --color-riso-gold: #bb8b41; /* Flat Gold  — culture          2.89:1 */
+
+  /* ------------------------------------------------------------------ grounds */
+  /* The four grounds and the two inks are NOT declared here, because they are the one
+     part of the palette that has to flip between light and dark. They live as raw
+     custom properties in global.css (:root and .dark) and are re-exported as Tailwind
+     utilities in the `@theme inline` block at the foot of this file. The utility names
+     are unchanged — `bg-paper`, `bg-plot`, `border-rule` — they just resolve per theme.
+
+     Light values:  paper #F2F4F0  plot #F8F9F6  rule #C6CEC8  graticule #E0E5E0
+     Dark values:   paper #14181A  plot #1C2220  rule #414947  graticule #232A28
+
+     The riso inks above are deliberately NOT flipped. Measured against the dark plot
+     ground they hold the same 1.28x heaviest-to-lightest spread as they do on paper,
+     and every one of them lands above 4:1 there rather than around 3:1. The set that
+     was derived for paper is already the right set for the dark ground. */
+
+  /* --------------------------------------------------------- primary (sky blue) */
+  /* used for links and interactive affordances; ramp derived from --color-riso-sky */
+  --color-primary-50: #e8f5fb;
+  --color-primary-100: #cfeaf6;
+  --color-primary-200: #a5d8ef;
+  --color-primary-300: #6fc0e4;
+  --color-primary-400: #34a4dc;
+  --color-primary-500: #0090ce;
+  --color-primary-600: #007db9;
+  --color-primary-700: #006ba6;
+  --color-primary-800: #005a93;
+  --color-primary-900: #004c7f;
+  --color-primary-950: #00365f;
+
+  /* ------------------------------------------------------------- base (paper→ink) */
+  /* a cool grey-green ramp derived from the paper, not Tailwind neutral */
+  --color-base-50: #f8f9f6;
+  --color-base-100: #f2f4f0;
+  --color-base-200: #e4e8e2;
+  --color-base-300: #c6cec8;
+  --color-base-400: #98a19c;
+  --color-base-500: #78827c;
+  --color-base-600: #5a6360;
+  --color-base-700: #414947;
+  --color-base-800: #2a312f;
+  --color-base-900: #1c2220;
+  --color-base-950: #14181a;
+
+  /* ------------------------------------------------------------------ typography */
+  --font-fallback:
+    "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif",
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+
+  --font-display: "Familjen Grotesk Variable", var(--font-fallback);
+  --font-body: "Literata Variable", Georgia, "Times New Roman", serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", "Menlo", "Consolas", monospace;
+
+  /* aliases the inherited template components already reference */
+  --font-heading: var(--font-display);
+  --font-sans: var(--font-body);
+
+  /* starwind and cosmic themes animations */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-marquee: marquee 70s linear infinite;
+  --animate-float: float 6s ease-in-out infinite;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--starwind-accordion-content-height);
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--starwind-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(calc(-100% - 8rem));
+    }
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+}
+
+/* "inline" option is necessary here https://github.com/tailwindlabs/tailwindcss/discussions/15122#discussioncomment-11356322 */
+@theme inline {
+  /* ------------------------------------------------------- grounds and ink (themed) */
+  /* Backed by the custom properties global.css sets on :root and .dark. */
+  --color-paper: var(--ground-paper);
+  --color-plot: var(--ground-plot);
+  --color-rule: var(--ground-rule);
+  --color-graticule: var(--ground-graticule);
+
+  /* Two ink roles, not three.
+     On paper (#F2F4F0) the ramp runs out of legible greys fast: base-500 measures
+     3.59:1 and base-400 only 2.40:1, so neither can carry small text. A third,
+     fainter tier would have to be an accessibility failure to be visibly fainter.
+     Tiers are separated by face, size and tracking instead, which this design was
+     already doing. Both roles clear AA in both themes:
+       ink        16.14 light / 14.41 dark
+       ink-muted   5.60 light /  6.73 dark  */
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+
+  /* starwind utilities setup */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-error: var(--error);
+  --color-error-foreground: var(--error-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-outline: var(--outline);
+
+  --radius-xs: calc(var(--radius) - 0.375rem);
+  --radius-sm: calc(var(--radius) - 0.25rem);
+  --radius-md: calc(var(--radius) - 0.125rem);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.25rem);
+  --radius-2xl: calc(var(--radius) + 0.5rem);
+  --radius-3xl: calc(var(--radius) + 1rem);
+}

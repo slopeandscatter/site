@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; background: #F2F4F0; color: #14181A;
+      font-family: Georgia, "Times New Roman", serif; }
+    a { color: #0090CE; } a:hover { color: #006BA6; }
+    .mono { font-family: ui-monospace, "Consolas", monospace; }
+    .disp { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-weight: 600;
+      letter-spacing: -0.028em; }
+    .eyebrow { font-family: ui-monospace, "Consolas", monospace; font-size: 10.5px;
+      letter-spacing: 0.16em; text-transform: uppercase; color: #5A6360; }
+    .lbl { font-family: ui-monospace, "Consolas", monospace; font-size: 10.5px;
+      letter-spacing: 0.14em; text-transform: uppercase; color: #5A6360; }
+    .tick { font-size: 9.5px; fill: #98A19C; letter-spacing: 0.06em;
+      font-family: ui-monospace, "Consolas", monospace; }
+    .axl { font-size: 10px; fill: #14181A; letter-spacing: 0.13em; text-transform: uppercase;
+      font-weight: 500; font-family: ui-monospace, "Consolas", monospace; }
+    .tag { font-size: 9.5px; fill: #14181A; letter-spacing: 0.14em; text-transform: uppercase;
+      font-family: ui-monospace, "Consolas", monospace; }
+    .nav { display: flex; align-items: center; gap: 18px; border-bottom: 1px solid #C6CEC8;
+      padding-bottom: 12px; }
+    .navlinks { margin-left: auto; display: flex; gap: 16px; }
+    .rule { border-top: 1px solid #C6CEC8; }
+    .rule-ink { border-top: 1px solid #14181A; }
+    .dot { display: block; width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  </style>
+</helmet>
+<div style="padding: 26px 34px 30px; display: flex; flex-direction: column; gap: 20px">
+  <div class="mono" style="font-size: 10.5px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: #98A19C">Layout D &#183; desks as a masthead band</div>
+  <div class="nav">
+    <span class="disp" style="font-size: 15px; text-transform: uppercase; letter-spacing: -0.03em">
+      Slope &#183; Scatter</span>
+    <span class="navlinks lbl"><span>Questions</span><span>Desks</span><span>Method</span></span>
+  </div>
+  <div style="max-width: 100%">
+    <div class="eyebrow" style="display: flex; align-items: center; gap: 8px">
+      <span class="dot" style="background:#F65058"></span> Curiosity, costed out
+    </div>
+    <div class="disp" style="font-size: 40px; line-height: 1.05; margin-top: 12px; text-wrap: balance">
+      We take a question nobody funded, and
+      <span style="color:#0090CE">do the arithmetic anyway</span>.
+    </div>
+  </div>
+  <div class="rule" style="display: flex; flex-wrap: wrap; align-items: center">
+      <div style="display: flex; align-items: center; gap: 8px; padding: 11px 20px 11px 0;
+        border-right: 1px solid #C6CEC8; margin-right: 20px">
+        <span class="dot" style="background:#0090CE"></span>
+        <span class="lbl" style="color:#14181A">Infrastructure</span>
+        <span class="lbl" style="color:#98A19C">2</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 11px 20px 11px 0;
+        border-right: 1px solid #C6CEC8; margin-right: 20px">
+        <span class="dot" style="background:#F65058"></span>
+        <span class="lbl" style="color:#14181A">Cost of living</span>
+        <span class="lbl" style="color:#98A19C">3</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 11px 20px 11px 0;
+        border-right: 1px solid #C6CEC8; margin-right: 20px">
+        <span class="dot" style="background:#00A95C"></span>
+        <span class="lbl" style="color:#14181A">Games</span>
+        <span class="lbl" style="color:#98A19C">2</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 11px 20px 11px 0;
+        border-right: 1px solid #C6CEC8; margin-right: 20px">
+        <span class="dot" style="background:#9F6DB9"></span>
+        <span class="lbl" style="color:#14181A">Sport</span>
+        <span class="lbl" style="color:#98A19C">3</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 11px 20px 11px 0;
+        border-right: 1px solid #C6CEC8; margin-right: 20px">
+        <span class="dot" style="background:#BB8B41"></span>
+        <span class="lbl" style="color:#14181A">Culture</span>
+        <span class="lbl" style="color:#98A19C">2</span>
+      </div>
+  </div>
+  <div class="rule" style="padding-top: 12px"><span class="lbl">Everything we&#8217;ve asked</span></div>
+        <svg viewBox="0 0 760 250" style="width: 100%; height: auto; display: block">
+          <rect x="46" y="14" width="700" height="200" fill="#F8F9F6"></rect>
+          <line x1="46" x2="746" y1="62" y2="62" stroke="#C6CEC8"></line>
+          <line x1="46" x2="746" y1="110" y2="110" stroke="#C6CEC8"></line>
+          <line x1="46" x2="746" y1="158" y2="158" stroke="#C6CEC8"></line>
+          <text x="38" y="66" text-anchor="end" class="tick">30</text>
+          <text x="38" y="114" text-anchor="end" class="tick">20</text>
+          <text x="38" y="162" text-anchor="end" class="tick">10</text>
+          <path d="M60 108 C 240 96, 480 88, 676 96 L 676 150 C 480 146, 240 152, 60 160 Z"
+            fill="#14181A" opacity="0.07"></path>
+          <line x1="60" y1="134" x2="676" y2="122" stroke="#14181A" stroke-width="1.4"
+            opacity="0.6"></line>
+          <circle cx="60" cy="126" r="6" fill="#BB8B41"></circle>
+          <circle cx="116" cy="130" r="6" fill="#00A95C"></circle>
+          <circle cx="172" cy="109" r="6" fill="#9F6DB9"></circle>
+          <circle cx="228" cy="96" r="6" fill="#BB8B41"></circle>
+          <circle cx="284" cy="62" r="6" fill="#0090CE"></circle>
+          <circle cx="340" cy="147" r="6" fill="#F65058"></circle>
+          <circle cx="396" cy="134" r="6" fill="#00A95C"></circle>
+          <circle cx="452" cy="117" r="6" fill="#F65058"></circle>
+          <circle cx="508" cy="37" r="6" fill="#0090CE"></circle>
+          <circle cx="564" cy="159" r="6" fill="#9F6DB9"></circle>
+          <circle cx="620" cy="79" r="6" fill="#F65058"></circle>
+          <circle cx="676" cy="172" r="6.5" fill="#9F6DB9"></circle>
+          <circle cx="676" cy="172" r="13" fill="none" stroke="#9F6DB9" stroke-width="1.1"
+            opacity="0.55"></circle>
+          <path d="M 668 166 L 650 148 L 596 148" fill="none" stroke="#14181A"
+            stroke-width="1"></path>
+          <text x="592" y="144" text-anchor="end" class="tag">Newest</text>
+          <line x1="46" y1="214" x2="746" y2="214" stroke="#14181A" stroke-width="1.2"></line>
+          <line x1="46" y1="14" x2="46" y2="214" stroke="#14181A" stroke-width="1.2"></line>
+          <text x="60" y="232" class="tick">Jul &#8217;25</text>
+          <text x="676" y="232" text-anchor="middle" class="tick">Dec &#8217;26</text>
+          <text x="46" y="246" class="tick">n = 12 &#183; r = 0.62</text>
+          <text x="746" y="246" text-anchor="end" class="axl">Published, oldest first &#8594;</text>
+        </svg>  <div class="rule-ink" style="padding-top: 16px; display: grid;
+    grid-template-columns: 110px minmax(0, 1fr); gap: 26px">
+    <div class="lbl" style="display: flex; align-items: center; gap: 8px; padding-top: 6px">
+      <span class="dot" style="background:#0090CE"></span> Start here
+    </div>
+    <div style="max-width: 46ch">
+      <div class="disp" style="font-size: 26px; line-height: 1.1">
+        What would high-speed rail across Canada actually cost?
+      </div>
+      <div style="font-size: 14px; line-height: 1.5; color: #5A6360; margin-top: 10px">
+        Single track, no tunnels, nothing crossing the Shield twice.
+      </div>
+      <div class="lbl" style="margin-top: 14px; color:#14181A">Read the piece &#8594;
+        <span style="color:#98A19C">&#183; Infrastructure &#183; 14 min</span></div>
+    </div>
+  </div>
+  <p class="mono" style="margin: 6px 0 0; font-size: 10.5px; color: #98A19C;
+    letter-spacing: 0.04em">The taxonomy is stated once, high up, as part of the masthead — it introduces the palette before any chart uses it.</p>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":880,"height":900}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script>
+</body>
+</html>

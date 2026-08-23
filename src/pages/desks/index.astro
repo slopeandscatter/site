@@ -1,0 +1,83 @@
+---
+/**
+ * * The desk index.
+ *
+ * Replaces /categories/, which listed free-form tags under a nav item labelled "Desks".
+ * The five desks are the site's actual taxonomy — every piece has exactly one, and the
+ * ink follows it into the nav, the tags and the homepage plot — and until now they had
+ * no page at all.
+ *
+ * Counts are derived, so a desk with nothing published says so rather than looking
+ * broken.
+ */
+import { desks } from "@config/desks";
+import { defaultLocale } from "@config/siteSettings.json";
+import { getAllPosts } from "@js/blogUtils";
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+const posts = await getAllPosts(defaultLocale);
+
+const rows = desks.map((desk) => ({
+  ...desk,
+  count: posts.filter((p) => p.data.desk === desk.id).length,
+}));
+---
+
+<BaseLayout
+  title="Desks"
+  description="Five desks, five inks. Every piece belongs to exactly one, and carries its colour everywhere it appears."
+>
+  <div class="mx-auto w-full max-w-6xl px-6">
+    <section class="pt-10 pb-8 md:pt-14">
+      <h1
+        class="font-display text-ink text-[2.6rem] leading-[1.04] font-semibold tracking-[-0.035em] text-pretty md:text-[4.2rem]"
+      >
+        Five desks.
+      </h1>
+      <p class="text-ink-muted mt-5 max-w-[68ch] text-[17px] leading-relaxed">
+        Every piece belongs to exactly one, chosen by what the question is <em>about</em> rather
+        than who it affects. Each desk has an ink, and that ink means that desk everywhere it
+        appears &mdash; on a tag, in the navigation, as a point in the plot on the front page.
+      </p>
+    </section>
+
+    <ul class="border-ink m-0 list-none border-t p-0">
+      {
+        rows.map((desk) => (
+          <li class="border-rule border-b">
+            <a
+              href={`/desks/${desk.id}/`}
+              class="group focus-visible:outline-riso-sky grid gap-x-8 gap-y-2 py-7 no-underline focus-visible:outline-2 focus-visible:outline-offset-4 md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)_auto] md:items-baseline"
+            >
+              <p class="text-ink group-hover:text-riso-sky m-0 flex items-center gap-3 font-mono text-[13px] tracking-[0.14em] uppercase transition-colors">
+                <span
+                  class="block size-2.5 shrink-0 rounded-full"
+                  style={`background:${desk.hex}`}
+                />
+                {desk.label}
+                <span class="text-ink-muted">{desk.ink}</span>
+              </p>
+
+              <p class="text-ink-muted m-0 max-w-[68ch] text-[15px] leading-relaxed">
+                {desk.blurb}
+              </p>
+
+              <p class="text-ink-muted m-0 font-mono text-[11px] tracking-[0.1em] uppercase tabular-nums">
+                {desk.count === 0 ? "Nothing yet" : `${desk.count} ${desk.count === 1 ? "piece" : "pieces"}`}
+              </p>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <p class="text-ink-muted mt-8 mb-24 max-w-[68ch] font-mono text-[13px] leading-relaxed">
+      The five inks were derived together so that no desk shouts and none vanishes &mdash; see{" "}
+      <a
+        href="/method/"
+        class="text-ink decoration-rule hover:decoration-riso-sky underline underline-offset-4"
+        >how we work</a
+      >.
+    </p>
+  </div>
+</BaseLayout>

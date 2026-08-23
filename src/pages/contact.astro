@@ -1,0 +1,105 @@
+---
+/**
+ * Contact.
+ *
+ * There is no form. A form here would be a control that either needs a backend nobody
+ * has wired or quietly drops what you typed — the previous one did the latter. An
+ * address you can copy works, needs nothing, and cannot fail silently.
+ *
+ * The routed aliases are the page's real content: a publication that asks to be
+ * corrected should make it obvious where a correction goes.
+ */
+import { defaultLocale } from "@config/siteSettings.json";
+import { getTranslatedData } from "@js/translationUtils";
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+const siteData = getTranslatedData("siteData", defaultLocale);
+const { email, routes, socials } = siteData.contact;
+---
+
+<BaseLayout
+  title="Contact"
+  description="Where to send a correction, a tip, a dataset question, or anything else. Every address routes to one inbox."
+>
+  <div class="mx-auto w-full max-w-6xl px-6">
+    <section class="pt-10 pb-8 md:pt-14">
+      <h1
+        class="font-display text-ink text-[2.6rem] leading-[1.04] font-semibold tracking-[-0.035em] text-pretty md:text-[4.2rem]"
+      >
+        Write to us.
+      </h1>
+      <p class="text-ink-muted mt-5 max-w-[68ch] text-[17px] leading-relaxed">
+        Especially if we got something wrong. Corrections are published, not buried &mdash; see{" "}
+        <a
+          href="/method/"
+          class="text-ink decoration-rule hover:decoration-riso-sky underline underline-offset-4"
+          >how we work</a
+        >.
+      </p>
+    </section>
+
+    <section class="border-ink mt-4 border-t pt-8">
+      <h2 class="text-ink-muted m-0 font-mono text-xs font-medium tracking-[0.14em] uppercase">
+        Where to send it
+      </h2>
+
+      <dl class="border-rule mt-6 grid grid-cols-1 border-t">
+        {
+          routes.map((route) => (
+            <div class="border-rule grid gap-1 border-b py-4 md:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] md:gap-8">
+              <dt class="m-0">
+                <a
+                  href={`mailto:${route.address}`}
+                  class="text-ink decoration-rule hover:decoration-riso-sky focus-visible:outline-riso-sky font-mono text-[13px] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
+                >
+                  {route.address}
+                </a>
+              </dt>
+              <dd class="text-ink-muted m-0 text-[17px] leading-relaxed">{route.purpose}</dd>
+            </div>
+          ))
+        }
+      </dl>
+
+      <p class="text-ink-muted mt-6 max-w-[68ch] text-[17px] leading-relaxed">
+        All of them route to one inbox &mdash;{" "}
+        <a
+          href={`mailto:${email}`}
+          class="text-ink decoration-rule hover:decoration-riso-sky font-mono text-[13px] underline underline-offset-4"
+          >{email}</a
+        >{" "}&mdash; so the address you pick is a subject line, not a different person. Write to
+        whichever fits; it all arrives in the same place.
+      </p>
+    </section>
+
+    {
+      /* Renders nothing while `contact.socials` is empty, which is the correct state
+        until there are real accounts. The template shipped this section pointing at the
+        theme author's own Threads and GitHub. */
+    }
+    {
+      socials.length > 0 && (
+        <section class="border-ink mt-16 border-t pt-8">
+          <h2 class="text-ink-muted m-0 font-mono text-xs font-medium tracking-[0.14em] uppercase">
+            Elsewhere
+          </h2>
+          <ul class="mt-6 flex list-none flex-wrap gap-x-8 gap-y-3 p-0">
+            {socials.map((social) => (
+              <li>
+                <a
+                  href={social.url}
+                  rel="me noopener"
+                  class="text-ink decoration-rule hover:decoration-riso-sky focus-visible:outline-riso-sky font-mono text-[13px] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
+                >
+                  {social.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
+    <div class="mb-24"></div>
+  </div>
+</BaseLayout>

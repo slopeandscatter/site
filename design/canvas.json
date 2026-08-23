@@ -1,0 +1,48 @@
+{
+  "pages": [
+    { "id": "layout", "name": "Layout" },
+    { "id": "options", "name": "Plot & hero options" }
+  ],
+  "artboards": [
+    { "file": "LayoutA.dc.html", "page": "layout", "x": 0, "y": 0, "w": 880, "h": 900, "title": "Layout A — Legend above plot" },
+    { "file": "LayoutB.dc.html", "page": "layout", "x": 940, "y": 0, "w": 880, "h": 900, "title": "Layout B — Legend below plot" },
+    { "file": "LayoutC.dc.html", "page": "layout", "x": 1880, "y": 0, "w": 880, "h": 900, "title": "Layout C — Featured leads" },
+    { "file": "LayoutD.dc.html", "page": "layout", "x": 2820, "y": 0, "w": 880, "h": 900, "title": "Layout D — Desks as masthead band" },
+
+    { "file": "Main.dc.html", "page": "options", "x": 0, "y": 0, "w": 900, "h": 560, "title": "Plot A — Sources cited" },
+    { "file": "PlotB.dc.html", "page": "options", "x": 960, "y": 0, "w": 900, "h": 560, "title": "Plot B — Lane per desk" },
+    { "file": "PlotC.dc.html", "page": "options", "x": 1920, "y": 0, "w": 900, "h": 560, "title": "Plot C — Printed index" },
+    { "file": "PlotD.dc.html", "page": "options", "x": 2880, "y": 0, "w": 900, "h": 560, "title": "Plot D — Small multiples" },
+    { "file": "HeroA.dc.html", "page": "options", "x": 0, "y": 700, "w": 900, "h": 460, "title": "Hero A — As built" },
+    { "file": "HeroB.dc.html", "page": "options", "x": 960, "y": 700, "w": 900, "h": 460, "title": "Hero B — Marginal note" },
+    { "file": "HeroC.dc.html", "page": "options", "x": 1920, "y": 700, "w": 900, "h": 460, "title": "Hero C — Overlapping" },
+    { "file": "HeroD.dc.html", "page": "options", "x": 2880, "y": 700, "w": 900, "h": 460, "title": "Hero D — The answer" }
+  ],
+  "annotations": [
+    {
+      "id": "layout-note",
+      "page": "layout",
+      "x": 0,
+      "y": -170,
+      "w": 700,
+      "text": "LAYOUT\nThe split header is the problem: headline left, desk legend right, reading as two unrelated columns. In all four the title runs FULL WIDTH and the legend moves next to the chart it belongs to. They differ in where the legend sits and whether the featured piece comes before or after the archive."
+    },
+    {
+      "id": "row-plot",
+      "page": "options",
+      "x": 0,
+      "y": -150,
+      "w": 620,
+      "text": "THE INDEX PLOT — decided: Plot A (sources cited on y). Kept for reference."
+    },
+    {
+      "id": "row-hero",
+      "page": "options",
+      "x": 0,
+      "y": 590,
+      "w": 620,
+      "text": "THE FEATURED BOX — superseded: the card now has its own section under the plot rather than floating over it."
+    }
+  ],
+  "launch": { "view": "canvas", "page": "layout" }
+}

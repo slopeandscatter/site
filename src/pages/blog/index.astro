@@ -1,0 +1,293 @@
+---
+/**
+ * * Every question.
+ *
+ * The linear complement to the homepage. The plot indexes the same pieces spatially —
+ * publication order against sourcing — and is the better view for seeing the shape of
+ * the archive. This is the better view for finding a specific thing.
+ *
+ * Explorable rather than merely listed: the desk chips filter in place and combine, and
+ * the sort control reorders by any of the metrics the site already derives. Nothing
+ * here needs maintaining per piece — desk, date, length and sourcing all come out of
+ * the file.
+ *
+ * Everything is server-rendered in date order. The controls only appear once the script
+ * marks the list ready, so a reader without JavaScript gets the complete archive rather
+ * than a set of buttons that do nothing.
+ */
+import PieceRow from "@components/listing/PieceRow.astro";
+import { desks } from "@config/desks";
+import { defaultLocale } from "@config/siteSettings.json";
+import { getAllPosts } from "@js/blogUtils";
+import { getLocaleFromUrl } from "@js/localeUtils";
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+const currLocale = getLocaleFromUrl(Astro.url);
+const posts = (await getAllPosts(defaultLocale)).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+
+// Year separators are interleaved into the one list rather than wrapping it in
+// sections, so that a sort by something other than date can simply hide them.
+type Item = { kind: "year"; year: number } | { kind: "post"; post: (typeof posts)[number] };
+const items: Item[] = [];
+let lastYear: number | null = null;
+for (const post of posts) {
+  const year = post.data.pubDate.getFullYear();
+  if (year !== lastYear) {
+    items.push({ kind: "year", year });
+    lastYear = year;
+  }
+  items.push({ kind: "post", post });
+}
+
+const deskCounts = desks
+  .map((desk) => ({ ...desk, count: posts.filter((p) => p.data.desk === desk.id).length }))
+  .filter((desk) => desk.count > 0);
+
+const SORTS = [
+  { key: "newest", label: "Newest" },
+  { key: "oldest", label: "Oldest" },
+  { key: "sources", label: "Most sourced" },
+  { key: "longest", label: "Longest" },
+  { key: "shortest", label: "Shortest" },
+];
+---
+
+<BaseLayout
+  title="Every question"
+  description="Everything we have asked. Filter by desk, sort by how well sourced or how long a piece is."
+>
+  <div class="mx-auto w-full max-w-6xl px-6" data-archive>
+    <section class="pt-10 pb-8 md:pt-14">
+      <h1
+        class="font-display text-ink text-[2.6rem] leading-[1.04] font-semibold tracking-[-0.035em] text-pretty md:text-[4.2rem]"
+      >
+        Every question.
+      </h1>
+      <p class="text-ink-muted mt-5 max-w-[68ch] text-[17px] leading-relaxed">
+        {posts.length}{" "}
+        {posts.length === 1 ? "piece" : "pieces"}. The{" "}
+        <a
+          href="/"
+          class="text-ink decoration-rule hover:decoration-riso-sky underline underline-offset-4"
+          >front page</a
+        > plots the same set against how well sourced each one is; this is where you come looking
+        for something specific.
+      </p>
+    </section>
+
+    {/* ------------------------------------------------------------------ controls */}
+    <div class="border-ink border-t pt-5" data-controls hidden>
+      <div class="flex flex-wrap items-baseline gap-x-8 gap-y-4">
+        <fieldset class="m-0 flex flex-wrap items-center gap-x-5 gap-y-2 border-0 p-0">
+          <legend class="sr-only">Filter by desk</legend>
+          <span
+            class="text-ink-muted font-mono text-[11px] tracking-[0.14em] uppercase"
+            aria-hidden="true">Desks</span
+          >
+          {
+            deskCounts.map((desk) => (
+              <button
+                type="button"
+                data-desk-filter={desk.id}
+                aria-pressed="false"
+                class="text-ink-muted aria-pressed:text-ink hover:text-ink focus-visible:outline-riso-sky flex cursor-pointer items-center gap-2.5 font-mono text-[11px] tracking-[0.1em] uppercase transition-opacity focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                <span
+                  class="block size-2.5 shrink-0 rounded-full"
+                  style={`background:${desk.hex}`}
+                />
+                {desk.label}
+                <span class="tabular-nums">{desk.count}</span>
+              </button>
+            ))
+          }
+        </fieldset>
+
+        <fieldset class="m-0 flex flex-wrap items-center gap-x-5 gap-y-2 border-0 p-0 md:ml-auto">
+          <legend class="sr-only">Sort</legend>
+          <span
+            class="text-ink-muted font-mono text-[11px] tracking-[0.14em] uppercase"
+            aria-hidden="true">Sort</span
+          >
+          {
+            SORTS.map((sort, i) => (
+              <button
+                type="button"
+                data-sort={sort.key}
+                aria-pressed={i === 0 ? "true" : "false"}
+                class="text-ink-muted aria-pressed:text-ink aria-pressed:underline hover:text-ink focus-visible:outline-riso-sky cursor-pointer font-mono text-[11px] tracking-[0.1em] uppercase underline-offset-4 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                {sort.label}
+              </button>
+            ))
+          }
+        </fieldset>
+      </div>
+
+      <p
+        class="text-ink-muted mt-4 font-mono text-[11px] tracking-[0.1em] uppercase"
+        data-count
+        aria-live="polite"
+      >
+      </p>
+    </div>
+
+    {/* ---------------------------------------------------------------------- list */}
+    <ul class="border-ink m-0 list-none border-t p-0" data-list>
+      {
+        items.map((item) =>
+          item.kind === "year" ? (
+            <li data-year={item.year}>
+              <h2 class="text-ink-muted border-rule m-0 border-b pt-8 pb-3 font-mono text-xs font-medium tracking-[0.14em] uppercase tabular-nums">
+                {item.year}
+              </h2>
+            </li>
+          ) : (
+            <PieceRow post={item.post} locale={currLocale} as="h3" />
+          ),
+        )
+      }
+    </ul>
+
+    <p class="text-ink m-0 hidden py-12 text-[17px] leading-relaxed" data-empty aria-live="polite">
+      No pieces on those desks yet.{" "}
+      <button
+        type="button"
+        data-clear
+        class="text-ink decoration-rule hover:decoration-riso-sky cursor-pointer underline underline-offset-4"
+        >Show everything</button
+      >.
+    </p>
+
+    <nav class="border-rule mt-12 mb-24 flex flex-wrap gap-x-10 gap-y-3 border-t pt-6">
+      <a
+        href="/desks/"
+        class="text-ink hover:text-riso-sky focus-visible:outline-riso-sky font-mono text-[11px] tracking-[0.14em] uppercase no-underline transition-colors focus-visible:outline-2 focus-visible:outline-offset-4"
+        >Browse by desk &rarr;</a
+      >
+      <a
+        href="/rss.xml"
+        class="text-ink hover:text-riso-sky focus-visible:outline-riso-sky font-mono text-[11px] tracking-[0.14em] uppercase no-underline transition-colors focus-visible:outline-2 focus-visible:outline-offset-4"
+        >RSS &rarr;</a
+      >
+    </nav>
+  </div>
+</BaseLayout>
+
+<script>
+  /**
+   * Filter and sort, entirely in the DOM.
+   *
+   * No data is shipped twice: every row already carries its desk, date, length and
+   * source count as data attributes, so this reorders elements that are already there
+   * rather than re-rendering from a payload.
+   *
+   * Year separators are only meaningful in date order, so they hide for every other
+   * sort — and after filtering, any year left with nothing under it hides too, which is
+   * the bug you get for free if you treat them as ordinary rows.
+   */
+  type Sort = "newest" | "oldest" | "sources" | "longest" | "shortest";
+
+  function initArchive(root: HTMLElement) {
+    const list = root.querySelector<HTMLElement>("[data-list]");
+    const controls = root.querySelector<HTMLElement>("[data-controls]");
+    const countEl = root.querySelector<HTMLElement>("[data-count]");
+    const emptyEl = root.querySelector<HTMLElement>("[data-empty]");
+    if (!list || !controls || !countEl || !emptyEl) return;
+
+    const pieces = [...list.querySelectorAll<HTMLElement>("[data-piece]")];
+    const years = [...list.querySelectorAll<HTMLElement>("[data-year]")];
+    if (!pieces.length) return;
+
+    const num = (el: HTMLElement, key: string) => Number(el.dataset[key] ?? 0);
+    const active = new Set<string>();
+    let sort: Sort = "newest";
+
+    // Ties break by recency, so an equal-sourced pair still has a stable, meaningful
+    // order rather than whatever the DOM happened to be holding.
+    const byDate = (a: HTMLElement, b: HTMLElement) => num(b, "date") - num(a, "date");
+    const comparators: Record<Sort, (a: HTMLElement, b: HTMLElement) => number> = {
+      newest: byDate,
+      oldest: (a, b) => num(a, "date") - num(b, "date"),
+      sources: (a, b) => num(b, "sources") - num(a, "sources") || byDate(a, b),
+      longest: (a, b) => num(b, "mins") - num(a, "mins") || byDate(a, b),
+      shortest: (a, b) => num(a, "mins") - num(b, "mins") || byDate(a, b),
+    };
+
+    function apply() {
+      const shown = pieces.filter((p) => !active.size || active.has(p.dataset.desk ?? ""));
+      const shownSet = new Set(shown);
+      pieces.forEach((p) => (p.hidden = !shownSet.has(p)));
+
+      shown.sort(comparators[sort]).forEach((p) => list!.appendChild(p));
+
+      // Year headings: date order only, and only where something follows them. In
+      // "oldest" they must also come out ascending, so each is moved to sit before the
+      // first piece of its year rather than left where it was rendered.
+      years.forEach((y) => (y.hidden = true));
+      if (sort === "newest" || sort === "oldest") {
+        const seen = new Set<string>();
+        shown.forEach((p) => {
+          const year = String(new Date(num(p, "date")).getFullYear());
+          if (seen.has(year)) return;
+          seen.add(year);
+          const heading = years.find((y) => y.dataset.year === year);
+          if (heading) {
+            heading.hidden = false;
+            list!.insertBefore(heading, p);
+          }
+        });
+      }
+
+      const total = pieces.length;
+      countEl!.textContent = active.size
+        ? `${shown.length} of ${total} shown`
+        : `${total} ${total === 1 ? "piece" : "pieces"}`;
+      emptyEl!.classList.toggle("hidden", shown.length > 0);
+      list!.hidden = shown.length === 0;
+    }
+
+    const deskButtons = [...root.querySelectorAll<HTMLButtonElement>("[data-desk-filter]")];
+    const paintDesks = () =>
+      deskButtons.forEach((o) =>
+        o.classList.toggle("opacity-30", active.size > 0 && !active.has(o.dataset.deskFilter!)),
+      );
+
+    deskButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.deskFilter!;
+        if (active.has(id)) active.delete(id);
+        else active.add(id);
+        btn.setAttribute("aria-pressed", String(active.has(id)));
+        paintDesks();
+        apply();
+      });
+    });
+
+    root.querySelectorAll<HTMLButtonElement>("[data-sort]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        sort = btn.dataset.sort as Sort;
+        root
+          .querySelectorAll<HTMLButtonElement>("[data-sort]")
+          .forEach((o) => o.setAttribute("aria-pressed", String(o === btn)));
+        apply();
+      });
+    });
+
+    root.querySelector<HTMLButtonElement>("[data-clear]")?.addEventListener("click", () => {
+      active.clear();
+      deskButtons.forEach((o) => o.setAttribute("aria-pressed", "false"));
+      paintDesks();
+      apply();
+    });
+
+    controls.hidden = false;
+    apply();
+  }
+
+  document
+    .querySelectorAll<HTMLElement>("[data-archive]")
+    .forEach((el) => !el.dataset.ready && ((el.dataset.ready = "1"), initArchive(el)));
+</script>

@@ -1,0 +1,153 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <style>
+          body {
+            margin: 0;
+            background: #f2f4f0;
+            color: #14181a;
+            font-family: Georgia, "Times New Roman", serif;
+          }
+          a {
+            color: #0090ce;
+          }
+          a:hover {
+            color: #006ba6;
+          }
+          .mono {
+            font-family: ui-monospace, "Consolas", monospace;
+          }
+          .disp {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            letter-spacing: -0.025em;
+            font-weight: 600;
+          }
+          .eyebrow {
+            font-size: 11px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: #5a6360;
+          }
+          .tick {
+            font-size: 10px;
+            fill: #98a19c;
+            letter-spacing: 0.06em;
+            font-family: ui-monospace, "Consolas", monospace;
+          }
+          .lane {
+            font-size: 10.5px;
+            fill: #14181a;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-family: ui-monospace, "Consolas", monospace;
+          }
+        </style>
+      </helmet>
+
+      <div style="padding: 34px 38px; display: flex; flex-direction: column; gap: 18px">
+        <div style="display: flex; align-items: baseline; gap: 14px">
+          <div class="mono eyebrow">Plot B</div>
+          <div class="disp" style="font-size: 21px">One lane per desk</div>
+        </div>
+
+        <p style="margin: 0; max-width: 62ch; font-size: 14.5px; line-height: 1.5; color: #5a6360">
+          Stop inventing a second axis. Each desk gets a lane, pieces sit along it in publication
+          order, and the shape of the archive — what you cover, how often — is the whole point.
+          Reads immediately at seven pieces and still at two hundred.
+        </p>
+
+        <svg viewBox="0 0 820 330" style="width: 100%; height: auto; display: block">
+          <sc-for list="{{lanes}}" as="l" hint-placeholder-count="5">
+            <line
+              x1="176"
+              x2="802"
+              y1="{{l.y}}"
+              y2="{{l.y}}"
+              stroke="#C6CEC8"
+              stroke-width="1"
+            ></line>
+            <circle cx="150" cy="{{l.y}}" r="5" fill="{{l.hex}}"></circle>
+            <text class="lane" x="134" y="{{l.ty}}" text-anchor="end">{{l.label}}</text>
+            <text class="tick" x="812" y="{{l.ty}}" text-anchor="end">{{l.count}}</text>
+          </sc-for>
+
+          <sc-for list="{{pts}}" as="p" hint-placeholder-count="12">
+            <circle cx="{{p.x}}" cy="{{p.y}}" r="7.5" fill="{{p.hex}}"></circle>
+          </sc-for>
+
+          <line x1="176" y1="278" x2="802" y2="278" stroke="#14181A" stroke-width="1.25"></line>
+          <sc-for list="{{xticks}}" as="t" hint-placeholder-count="5">
+            <text class="tick" x="{{t.x}}" y="296" text-anchor="middle">{{t.label}}</text>
+          </sc-for>
+          <text class="lane" x="802" y="318" text-anchor="end">
+            Published, oldest first &#8594;
+          </text>
+        </svg>
+
+        <p class="mono" style="margin: 0; font-size: 11px; color: #98a19c; letter-spacing: 0.04em">
+          Trade-off: no regression, so the homepage stops demonstrating the half of the name that
+          slopes.
+        </p>
+      </div>
+    </x-dc>
+
+    <script data-dc-script data-props='{"$preview":{"width":900,"height":560}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const DESKS = [
+            { id: "infra", label: "Infrastructure", hex: "#0090CE" },
+            { id: "living", label: "Cost of living", hex: "#F65058" },
+            { id: "games", label: "Games", hex: "#00A95C" },
+            { id: "sport", label: "Sport", hex: "#9F6DB9" },
+            { id: "culture", label: "Culture", hex: "#BB8B41" },
+          ];
+          const data = [
+            "culture",
+            "games",
+            "sport",
+            "culture",
+            "infra",
+            "living",
+            "games",
+            "living",
+            "infra",
+            "sport",
+            "living",
+            "sport",
+          ];
+          const L = 176,
+            R = 802,
+            T = 40,
+            GAP = 46;
+          const laneY = {};
+          const lanes = DESKS.map((d, i) => {
+            const y = T + i * GAP;
+            laneY[d.id] = y;
+            return {
+              y,
+              ty: y + 4,
+              label: d.label,
+              hex: d.hex,
+              count: String(data.filter((x) => x === d.id).length),
+            };
+          });
+          const sx = (i) => L + ((i + 0.5) / data.length) * (R - L);
+          const hex = Object.fromEntries(DESKS.map((d) => [d.id, d.hex]));
+          const pts = data.map((d, i) => ({ x: sx(i).toFixed(1), y: laneY[d], hex: hex[d] }));
+          const labels = ["Jul ’25", "Nov ’25", "Apr ’26", "Sep ’26", "Dec ’26"];
+          const xticks = labels.map((label, k) => ({
+            x: sx((k * (data.length - 1)) / 4).toFixed(1),
+            label,
+          }));
+          return { lanes, pts, xticks };
+        }
+      }
+    </script>
+  </body>
+</html>

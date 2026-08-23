@@ -1,0 +1,10 @@
+{
+  "detector": {
+    "ignoreRules": [
+      "codex-grid-background"
+    ],
+    "_ignoreRulesReason": {
+      "codex-grid-background": "The 120px graticule is the design system's ground, not decoration - see DESIGN.md Overview, 'The Plotting Table'. The rule's own text exempts measurement surfaces; this is one."
+    }
+  }
+}

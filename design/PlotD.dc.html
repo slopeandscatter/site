@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <style>
+          body {
+            margin: 0;
+            background: #f2f4f0;
+            color: #14181a;
+            font-family: Georgia, "Times New Roman", serif;
+          }
+          a {
+            color: #0090ce;
+          }
+          a:hover {
+            color: #006ba6;
+          }
+          .mono {
+            font-family: ui-monospace, "Consolas", monospace;
+          }
+          .disp {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            letter-spacing: -0.025em;
+            font-weight: 600;
+          }
+          .eyebrow {
+            font-size: 11px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: #5a6360;
+          }
+          .cap {
+            font-family: ui-monospace, "Consolas", monospace;
+            font-size: 10px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #5a6360;
+          }
+          .n {
+            font-family: ui-monospace, "Consolas", monospace;
+            font-size: 10px;
+            color: #98a19c;
+          }
+        </style>
+      </helmet>
+
+      <div style="padding: 34px 38px; display: flex; flex-direction: column; gap: 18px">
+        <div style="display: flex; align-items: baseline; gap: 14px">
+          <div class="mono eyebrow">Plot D</div>
+          <div class="disp" style="font-size: 21px">Five small slopes, one per desk</div>
+        </div>
+
+        <p style="margin: 0; max-width: 62ch; font-size: 14.5px; line-height: 1.5; color: #5a6360">
+          The name's idea repeated five times: each desk gets its own miniature, so you can see
+          which beats are growing and which have gone quiet. The desk colour stops being decoration
+          and becomes the organising principle of the page.
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px">
+          <sc-for list="{{panels}}" as="p" hint-placeholder-count="5">
+            <div
+              style="
+                background: #f8f9f6;
+                border: 1px solid #c6cec8;
+                padding: 12px 12px 10px;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+              "
+            >
+              <div style="display: flex; align-items: center; gap: 7px">
+                <span
+                  style="display: block; width: 8px; height: 8px; border-radius: 50%;
+            background: {{p.hex}}"
+                ></span>
+                <span class="cap">{{p.label}}</span>
+              </div>
+              <svg viewBox="0 0 140 96" style="width: 100%; height: auto; display: block">
+                <line x1="6" y1="88" x2="134" y2="88" stroke="#C6CEC8" stroke-width="1"></line>
+                <line
+                  x1="{{p.fx1}}"
+                  y1="{{p.fy1}}"
+                  x2="{{p.fx2}}"
+                  y2="{{p.fy2}}"
+                  stroke="{{p.hex}}"
+                  stroke-width="1.5"
+                  opacity="0.55"
+                ></line>
+                <sc-for list="{{p.dots}}" as="d" hint-placeholder-count="3">
+                  <circle cx="{{d.x}}" cy="{{d.y}}" r="5" fill="{{p.hex}}"></circle>
+                </sc-for>
+              </svg>
+              <div class="n">{{p.count}} pieces</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <p class="mono" style="margin: 0; font-size: 11px; color: #98a19c; letter-spacing: 0.04em">
+          Trade-off: with two or three pieces a desk today, most panels are nearly empty — this one
+          only earns its place once the archive is deep.
+        </p>
+      </div>
+    </x-dc>
+
+    <script data-dc-script data-props='{"$preview":{"width":900,"height":560}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const raw = [
+            { id: "infra", label: "Infrastructure", hex: "#0090CE", v: [35, 41] },
+            { id: "living", label: "Cost of living", hex: "#F65058", v: [15, 22, 31] },
+            { id: "games", label: "Games", hex: "#00A95C", v: [19, 18] },
+            { id: "sport", label: "Sport", hex: "#9F6DB9", v: [24, 12, 9] },
+            { id: "culture", label: "Culture", hex: "#BB8B41", v: [20, 27] },
+          ];
+          const sx = (i, n) => (n === 1 ? 70 : 20 + (i / (n - 1)) * 100);
+          const sy = (v) => 84 - (v / 45) * 70;
+          const panels = raw.map((p) => {
+            const n = p.v.length;
+            const dots = p.v.map((v, i) => ({ x: sx(i, n).toFixed(1), y: sy(v).toFixed(1) }));
+            const first = p.v[0],
+              last = p.v[n - 1];
+            return {
+              ...p,
+              dots,
+              count: String(n),
+              fx1: sx(0, n).toFixed(1),
+              fy1: sy(first).toFixed(1),
+              fx2: sx(n - 1, n).toFixed(1),
+              fy2: sy(last).toFixed(1),
+            };
+          });
+          return { panels };
+        }
+      }
+    </script>
+  </body>
+</html>

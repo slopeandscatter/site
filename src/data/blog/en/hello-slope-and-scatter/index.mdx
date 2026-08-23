@@ -1,0 +1,75 @@
+---
+title: What are we doing here?
+description: A note on method, before the first real question.
+draft: false
+authors:
+  - main-author
+pubDate: 2026-08-17
+desk: infrastructure
+categories:
+  - method
+---
+
+import Answer from "@components/article/Answer.astro";
+import Receipts from "@components/article/Receipts.astro";
+
+<Answer>
+  We publish the arithmetic, not just the answer. Every piece shows the question, the
+  model, something you can push on, and the full working &mdash; and says plainly where
+  it might be wrong.
+</Answer>
+
+Most numbers you read in a news story arrive fully formed. Someone did arithmetic
+somewhere, and you are handed the result and asked to trust it. That is usually fine.
+It is also the least interesting part of the work.
+
+## The shape of a piece
+
+Every piece here follows the same four steps, in the same order, and none of them are
+hidden from you.
+
+First, a question — the kind you would argue about in a pub, phrased tightly enough that
+a number could settle it. Not "is high-speed rail worth it", which is a values question,
+but "what would it cost to build", which is an arithmetic one.
+
+Second, a model. Real unit costs, real rates, and every assumption written down where you
+can see it. Where the data runs out, we say so and estimate rather than quietly rounding
+the problem away.
+
+Third, your turn. The model ships as something you can drive. Change the route, the wage,
+the scope, and watch the answer move. If an assumption is doing all the work, you should
+be able to find that out yourself in about ten seconds.
+
+Fourth, the receipts. Sources, fudge factors, and the places we could be wrong — at the
+bottom, in full, including the ones that make the headline number look shakier.
+
+## On confidence
+
+A number without a range is a claim, not an estimate. Where we can put an honest interval
+around an answer, we will, and where the interval is embarrassingly wide we will show you
+that too. A wide interval is not a failure of the model. It is frequently the finding.
+
+## What this is not
+
+It is not a prediction service, and it is not a calculator that tells you what to think.
+The point is to show the working closely enough that you could disagree with it
+specifically — to point at a line and say _that assumption is wrong, and here is why_ —
+rather than only being able to distrust the conclusion in general.
+
+That is a higher bar than it sounds. It means publishing the parts that are shaky.
+
+<Receipts checked="22 August 2026">
+  <Fragment slot="sources">
+    This piece is a statement of method and cites nothing. Every piece that reports a
+    number will list its sources here, each with the date it was accessed.
+  </Fragment>
+  <Fragment slot="assumptions">
+    None. There is no model in this piece to make assumptions with.
+  </Fragment>
+  <Fragment slot="wrong">
+    The obvious risk is that this reads as a promise rather than a practice. Hold us to
+    it: if a piece ships without its working, that is a failure of this page, and
+    [corrections@slopeandscatter.com](mailto:corrections@slopeandscatter.com) is the
+    place to say so.
+  </Fragment>
+</Receipts>

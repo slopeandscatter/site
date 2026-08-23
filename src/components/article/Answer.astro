@@ -1,0 +1,85 @@
+---
+/**
+ * * The answer.
+ *
+ * Fixed position, free form. It always sits directly under the masthead so a reader who
+ * wants only the result never has to hunt for it — but what goes inside is whatever the
+ * piece needs: a sentence, a figure with its range, a yes/no, or "it depends, and here
+ * is the shape of the depending".
+ *
+ * That split is deliberate. Fixing the SHAPE of an answer block would push every piece
+ * toward having a single headline number, which is exactly the false precision the
+ * method page promises to avoid. The frame guarantees position; the author owns form.
+ *
+ * Usage in MDX:
+ *
+ *   <Answer>
+ *     About **four years of rent** — though that swings by a year either way depending
+ *     on how you count a deposit.
+ *   </Answer>
+ *
+ *   <Answer figure="$1.4B" range="±$300M" basis="Assumes 2024 unit costs held flat.">
+ *     Roughly what the tunnel costs before anyone has dug anything.
+ *   </Answer>
+ */
+interface Props {
+  /** the headline number, when the piece has one */
+  figure?: string;
+  /** its uncertainty. Shown next to the figure, never smaller than it deserves. */
+  range?: string;
+  /** the single biggest assumption the figure rests on */
+  basis?: string;
+}
+
+const { figure, range, basis } = Astro.props as Props;
+---
+
+{/*
+  No top rule of its own. When the answer is first in the body — which is the
+  convention — the article body's rule already sits directly above it, and a second
+  hairline 68ch wide under a full-width one reads as a mistake rather than a division.
+*/}
+<section aria-label="The answer" class="mb-8" data-answer>
+  <h2 class="text-ink-muted m-0 font-mono text-xs font-medium tracking-[0.14em] uppercase">
+    The answer
+  </h2>
+
+  {
+    figure && (
+      <p class="mt-5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <span class="font-display text-ink text-3xl leading-none font-semibold tracking-[-0.028em] tabular-nums md:text-[2.6rem]">
+          {figure}
+        </span>
+        {range && (
+          <span class="text-ink-muted font-mono text-[15px] tabular-nums">{range}</span>
+        )}
+      </p>
+    )
+  }
+
+  <div class="answer-prose text-ink mt-5 max-w-[68ch] text-[17px] leading-relaxed">
+    <slot />
+  </div>
+
+  {
+    basis && (
+      <p class="text-ink-muted mt-4 max-w-[68ch] font-mono text-[13px] leading-relaxed">
+        {basis}
+      </p>
+    )
+  }
+</section>
+
+<style>
+  /* The slot carries markdown, so its paragraphs need the body treatment without
+     inheriting the wider article rules. */
+  .answer-prose :global(p) {
+    margin: 0;
+  }
+  .answer-prose :global(p + p) {
+    margin-top: 0.75rem;
+  }
+  .answer-prose :global(strong) {
+    font-weight: 600;
+  }
+</style>

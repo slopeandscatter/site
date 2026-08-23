@@ -1,0 +1,83 @@
+---
+import LanguageSelect from "@components/language-select/LanguageSelect.astro";
+import MobileNav from "@components/nav/MobileNav/MobileNav.astro";
+import NavDropdownToggle from "@components/nav/NavDropdown/NavDropdownToggle.astro";
+import NavLink from "@components/nav/NavLink.astro";
+import SiteLogo from "@components/site-logo/SiteLogo.astro";
+import ThemeToggle from "@components/theme-toggle/ThemeToggle.astro";
+import { getLocaleFromUrl } from "@js/localeUtils";
+import { getTranslatedData } from "@js/translationUtils";
+
+import { getLocalizedRoute } from "@/js/translationUtils";
+
+import MegaMenuDropdownToggle from "./NavDropdown/MegaMenuDropdownToggle.astro";
+
+const currLocale = getLocaleFromUrl(Astro.url);
+const navData = getTranslatedData("navData", currLocale);
+import { locales } from "@config/siteSettings.json";
+// console.log(JSON.stringify(navData, null, 2));
+---
+
+<!--
+  The nav sits ON the paper rather than in a bar over it: no background, no rule, no
+  fixed positioning. The template shipped a dark slab, which read as a different design
+  laid on top of this one. Being in normal flow also means pages no longer have to pay
+  for their own clearance under a fixed header.
+-->
+<section id="nav" class="relative z-20 flex w-full flex-col pt-8 pb-2">
+  <div class="mx-auto flex w-full">
+    <div class="site-container flex w-full items-center">
+      <header class="relative flex w-full items-center gap-2">
+        <!-- home button / image -->
+        <div class="flex h-full flex-auto justify-start">
+          <SiteLogo />
+        </div>
+
+        <!-- <div class="flex flex-auto justify-center">
+          
+        </div> -->
+
+        <!-- desktop nav menu -->
+        <div>
+          <div class="flex h-full flex-auto justify-end gap-2">
+            <nav class="hidden md:block">
+              <ul class="flex h-full items-center">
+                {
+                  // if dropdown exists, setup the dropdown, otherwise it is just a link
+                  navData.map((navItem) =>
+                    "dropdown" in navItem ? (
+                      // non-mobile dropdown menu
+                      <NavDropdownToggle navItem={navItem} />
+                    ) : "megaMenuColumns" in navItem ? (
+                      <MegaMenuDropdownToggle {navItem} />
+                    ) : (
+                      // normal nav link
+                      <NavLink {navItem} />
+                    ),
+                  )
+                }
+              </ul>
+            </nav>
+            <div class="hidden items-center gap-2 md:flex">
+              <!-- don't forget to also update the button in MobileNav.astro! -->
+              <a
+                href="/#newsletter"
+                class="border-ink text-ink hover:bg-ink hover:text-paper primary-focus border px-3 py-1.5 font-mono text-xs tracking-[0.1em] whitespace-nowrap uppercase transition-colors"
+                >Subscribe</a
+              >
+
+              <ThemeToggle class="" />
+
+              {locales.length > 1 && <LanguageSelect class="" />}
+            </div>
+
+            <!-- mobile nav menu, only load on small screens where it is visible -->
+            <div class="flex items-center md:hidden">
+              <MobileNav />
+            </div>
+          </div>
+        </div>
+      </header>
+    </div>
+  </div>
+</section>

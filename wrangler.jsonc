@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // NOTE: must match the Worker name in the Cloudflare dashboard, or
+  // `wrangler deploy` creates a second Worker instead of updating yours.
+  "name": "slopeandscatter",
+  "compatibility_date": "2026-08-23",
+
+  // Static-only site: no `main` entrypoint, so no adapter and no server bundle.
+  // Astro emits directory-style URLs (/blog/ -> blog/index.html); the default
+  // "auto-trailing-slash" handling resolves those.
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  }
+}

@@ -3,7 +3,6 @@ import { join } from "node:path";
 
 import { unified } from "@astrojs/markdown-remark";
 import mdx from "@astrojs/mdx";
-import netlify from "@astrojs/netlify";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 import compress from "@playform/compress";
@@ -15,9 +14,6 @@ import icon from "astro-icon";
 export default defineConfig({
   site: "https://slopeandscatter.com",
   cacheDir: join(tmpdir(), "slopeandscatter-astro-cache"),
-  adapter: netlify({
-    imageCDN: false,
-  }),
   // Single locale. The i18n helpers in src/js remain in place and are no-ops at
   // one locale, so adding a second language later is a config change, not a rewrite.
   i18n: {

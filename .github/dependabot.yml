@@ -1,0 +1,30 @@
+# Updates arrive as reviewable PRs, which is what makes exact pinning
+# affordable: versions stay deterministic and upgrades stay deliberate.
+# Security advisories are raised immediately regardless of this schedule.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # Astro and its integrations move in lockstep; a split upgrade is how
+      # the adapter/core mismatch that broke the first Cloudflare build
+      # happens. Keep them in one PR so they are reviewed together.
+      astro:
+        patterns:
+          - astro
+          - "@astrojs/*"
+      dev-tooling:
+        patterns:
+          - eslint
+          - "eslint-*"
+          - "@eslint/*"
+          - "typescript-eslint"
+          - prettier
+          - "prettier-*"
+          - typescript
+        update-types:
+          - minor
+          - patch

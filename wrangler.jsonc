@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   // NOTE: must match the Worker name in the Cloudflare dashboard, or
   // `wrangler deploy` creates a second Worker instead of updating yours.
-  "name": "slopeandscatter",
+  "name": "site",
   "compatibility_date": "2026-08-23",
 
   // Static-only site: no `main` entrypoint, so no adapter and no server bundle.
